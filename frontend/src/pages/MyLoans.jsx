@@ -2,9 +2,9 @@ import { useEffect, useState } from "react";
 import { getMyLoans, returnItem } from "../services/itemService";
 
 const STATUS_LABEL = {
-  borrowed: { label: "Aktif", className: "badge-blue" },
+  borrowed: { label: "Dipinjam", className: "badge-blue" },
   pending_return: { label: "Menunggu Konfirmasi Admin", className: "badge-yellow" },
-  returned: { label: "Selesai", className: "badge-green" },
+  returned: { label: "Dikembalikan", className: "badge-green" },
 };
 
 export default function MyLoans() {
@@ -50,7 +50,7 @@ export default function MyLoans() {
               className={filter === f ? "btn-primary" : "btn-secondary"}
               onClick={() => setFilter(f)}
             >
-              {f === "all" ? "Semua" : f === "borrowed" ? "Aktif" : f === "pending_return" ? "Menunggu" : "Selesai"}
+              {f === "all" ? "Semua" : f === "borrowed" ? "Dipinjam" : f === "pending_return" ? "Menunggu Konfirmasi Admin" : "Dikembalikan"}
             </button>
           ))}
         </div>
@@ -76,6 +76,7 @@ export default function MyLoans() {
                   <p>{loan.item?.category}</p>
                   <p>Jumlah: <strong>{loan.qty}</strong></p>
                   <p>Dipinjam: {new Date(loan.borrowDate).toLocaleDateString("id-ID")}</p>
+                  <p>Tanggal kembali: {new Date(loan.dueDate).toLocaleDateString("id-ID")}</p>
                   {loan.returnDate && (
                     <p>Dikembalikan: {new Date(loan.returnDate).toLocaleDateString("id-ID")}</p>
                   )}

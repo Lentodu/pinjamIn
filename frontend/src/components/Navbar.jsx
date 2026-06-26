@@ -19,6 +19,14 @@ export default function Navbar() {
         Pinjam<span>in</span>
       </div>
 
+      {user?.role === "admin" && (
+        <div className="sidebar-section">
+          <Link to="/dashboard" className={`sidebar-link ${isActive("/dashboard") ? "active" : ""}`}>
+            <span>Dashboard</span>
+          </Link>
+        </div>
+      )}
+
       <div className="sidebar-section">
         <div className="sidebar-section-title">Menu</div>
         <Link to="/items" className={`sidebar-link ${isActive("/items") ? "active" : ""}`}>
@@ -46,9 +54,6 @@ export default function Navbar() {
       {user?.role === "admin" && (
         <div className="sidebar-section">
           <div className="sidebar-section-title">Analitik</div>
-          <Link to="/dashboard" className={`sidebar-link ${isActive("/dashboard") ? "active" : ""}`}>
-            <span>Dashboard</span>
-          </Link>
           <Link to="/reports" className={`sidebar-link ${isActive("/reports") ? "active" : ""}`}>
             <span>Laporan</span>
           </Link>

@@ -50,7 +50,7 @@ export default function Loans() {
               className={filter === f ? "btn-primary" : "btn-secondary"}
               onClick={() => setFilter(f)}
             >
-              {f === "all" ? "Semua" : f === "borrowed" ? "Dipinjam" : f === "pending_return" ? "Menunggu" : "Dikembalikan"}
+              {f === "all" ? "Semua" : f === "borrowed" ? "Dipinjam" : f === "pending_return" ? "Menunggu Konfirmasi Admin" : "Dikembalikan"}
             </button>
           ))}
         </div>
@@ -67,6 +67,7 @@ export default function Loans() {
                 <th>Barang</th>
                 <th>Qty</th>
                 <th>Tgl Pinjam</th>
+                <th>Batas Kembali</th>
                 <th>Tgl Kembali</th>
                 <th>Status</th>
                 <th>Aksi</th>
@@ -84,6 +85,10 @@ export default function Loans() {
                     <td>{loan.item?.name}<br /><small>{loan.item?.category}</small></td>
                     <td>{loan.qty}</td>
                     <td>{new Date(loan.borrowDate).toLocaleDateString("id-ID")}</td>
+                    <td className={["borrowed", "pending_return"].includes(loan.status) && new Date(loan.dueDate) < new Date() ? "text-danger" : ""}>
+                      {new Date(loan.dueDate).toLocaleDateString("id-ID")}
+                      {["borrowed", "pending_return"].includes(loan.status) && new Date(loan.dueDate) < new Date() && " ⚠️"}
+                    </td>
                     <td>{loan.returnDate ? new Date(loan.returnDate).toLocaleDateString("id-ID") : "-"}</td>
                     <td>
                       <span className={`badge ${status.className}`}>{status.label}</span>

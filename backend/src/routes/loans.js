@@ -13,6 +13,15 @@ router.post("/", authenticate, async (req, res) => {
     return res.status(400).json({ message: "itemId, qty, dan dueDate wajib diisi" });
   }
 
+  // Validasi tanggal kembali tidak boleh sebelum hari ini
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const parsedDueDate = new Date(dueDate);
+  parsedDueDate.setHours(0, 0, 0, 0);
+  if (parsedDueDate < today) {
+    return res.status(400).json({ message: "Tanggal pengembalian tidak boleh sebelum hari ini" });
+  }
+
   try {
     const item = await prisma.item.findUnique({ where: { id: Number(itemId) } });
     if (!item) return res.status(404).json({ message: "Barang tidak ditemukan" });

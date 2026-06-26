@@ -55,7 +55,8 @@ export default function Items() {
       ) : (
         <div className="items-grid">
           {items.map((item) => {
-            const status = STATUS_LABEL[item.status] || { label: item.status, className: "badge-gray" };
+            const effectiveStatus = item.status === "rusak" ? "rusak" : (item.stock === 0 ? "dipinjam" : "tersedia");
+            const status = STATUS_LABEL[effectiveStatus] || { label: effectiveStatus, className: "badge-gray" };
             return (
               <div key={item.id} className="item-card">
                 {item.photo ? (

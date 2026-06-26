@@ -9,6 +9,16 @@ const STATUS_LABEL = {
   rusak: { label: "Rusak", className: "badge-red" },
 };
 
+// Ambil tanggal lokal (bukan UTC) dalam format YYYY-MM-DD,
+// supaya tidak mundur sehari di zona waktu yang lebih cepat dari UTC (misal WIB).
+function getTodayLocalString() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 export default function ItemDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -19,6 +29,7 @@ export default function ItemDetail() {
   const [loading, setLoading] = useState(true);
   const [borrowing, setBorrowing] = useState(false);
   const [message, setMessage] = useState("");
+  const [messageType, setMessageType] = useState("info");
 
   useEffect(() => {
     getItem(id)
@@ -28,16 +39,28 @@ export default function ItemDetail() {
   }, [id]);
 
   const handleBorrow = async () => {
-    if (qty < 1 || qty > item.stock || !dueDate) return;
+    if (!dueDate) {
+      setMessage("Masukkan tanggal pengembalian");
+      setMessageType("error");
+      return;
+    }
+    if (dueDate < getTodayLocalString()) {
+      setMessage("Tanggal pengembalian tidak boleh sebelum hari ini");
+      setMessageType("error");
+      return;
+    }
+    if (qty < 1 || qty > item.stock) return;
     setBorrowing(true);
     setMessage("");
     try {
       await borrowItem(item.id, qty, dueDate);
       setMessage("Peminjaman berhasil!");
+      setMessageType("info");
       const updated = await getItem(id);
       setItem(updated);
     } catch (err) {
       setMessage("" + (err.response?.data?.message || "Gagal meminjam"));
+      setMessageType("error");
     } finally {
       setBorrowing(false);
     }
@@ -46,7 +69,8 @@ export default function ItemDetail() {
   if (loading) return <div className="page-container">Memuat...</div>;
   if (!item) return null;
 
-  const status = STATUS_LABEL[item.status] || { label: item.status, className: "badge-gray" };
+  const effectiveStatus = item.status === "rusak" ? "rusak" : (item.stock === 0 ? "dipinjam" : "tersedia");
+  const status = STATUS_LABEL[effectiveStatus] || { label: effectiveStatus, className: "badge-gray" };
 
   return (
     <div className="page-container">
@@ -68,7 +92,7 @@ export default function ItemDetail() {
           <p>Stok tersedia: <strong>{item.stock}</strong></p>
           <span className={`badge ${status.className}`}>{status.label}</span>
 
-          {message && <p className="info-msg">{message}</p>}
+          {message && <p className={messageType === "error" ? "error-msg" : "info-msg"}>{message}</p>}
 
           {user?.role === "user" && item.status !== "rusak" && item.stock > 0 && (
             <div className="borrow-form">
@@ -84,7 +108,7 @@ export default function ItemDetail() {
               <input
                 type="date"
                 value={dueDate}
-                min={new Date().toISOString().split("T")[0]}
+                min={getTodayLocalString()}
                 onChange={(e) => setDueDate(e.target.value)}
               />
               <button onClick={handleBorrow} className="btn-primary" disabled={borrowing}>

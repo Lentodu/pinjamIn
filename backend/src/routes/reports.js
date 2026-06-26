@@ -22,11 +22,51 @@ router.get("/dashboard", authenticate, adminOnly, async (req, res) => {
       where: { status: "pending_return" }
     });
 
+    const returned = await prisma.loan.count({
+      where: { status: "returned" }
+    });
+
+    // Peminjaman yang sudah lewat batas kembali tapi belum dikembalikan
+    const overdueLoans = await prisma.loan.findMany({
+      where: {
+        status: { in: ["borrowed", "pending_return"] },
+        dueDate: { lt: new Date() },
+      },
+      include: {
+        user: { select: { name: true, nim: true } },
+        item: { select: { name: true } },
+      },
+      orderBy: { dueDate: "asc" },
+    });
+
+    // Barang paling sering dipinjam (top 5, dihitung dari seluruh riwayat)
+    const grouped = await prisma.loan.groupBy({
+      by: ["itemId"],
+      _count: { itemId: true },
+      orderBy: { _count: { itemId: "desc" } },
+      take: 5,
+    });
+    const groupedItems = await prisma.item.findMany({
+      where: { id: { in: grouped.map((g) => g.itemId) } },
+      select: { id: true, name: true, category: true },
+    });
+    const topItems = grouped.map((g) => {
+      const item = groupedItems.find((i) => i.id === g.itemId);
+      return {
+        name: item?.name ?? "Barang tidak ditemukan",
+        category: item?.category ?? "-",
+        totalPinjam: g._count.itemId,
+      };
+    });
+
     res.json({
       totalItems,
       totalUsers,
       activeLoans,
-      pendingReturns
+      pendingReturns,
+      returned,
+      overdueLoans,
+      topItems
     });
   } catch (err) {
     console.error(err);
@@ -75,7 +115,7 @@ router.get("/", authenticate, adminOnly, async (req, res) => {
     const summary = {
       total: loans.length,
       borrowed: loans.filter((l) => l.status === "borrowed").length,
-      pending_return: loans.filter((l) => l.status === "pending_return").length,
+      pendingReturn: loans.filter((l) => l.status === "pending_return").length,
       returned: loans.filter((l) => l.status === "returned").length,
     };
 
