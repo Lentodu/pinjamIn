@@ -1,6 +1,6 @@
 # 📦 Pinjamin
 
-**Pinjamin** adalah aplikasi manajemen peminjaman aset kampus berbasis web yang dikembangkan untuk memenuhi tugas mata kuliah **Sistem Terdistribusi**.
+**Pinjamin** adalah aplikasi manajemen peminjaman aset kampus berbasis web
 
 Sistem ini dirancang untuk membantu pengelolaan peminjaman peralatan dan aset milik kampus — mulai dari peralatan elektronik hingga alat laboratorium dan praktikum — secara terdigitalisasi dan terpusat.
 
@@ -242,7 +242,7 @@ Install dependencies:
 npm install
 ```
 
-Buat file `.env` di dalam folder `backend 2/`:
+Buat file `.env` di dalam folder `backend/`:
 ```env
 DATABASE_URL="mysql://root:@localhost:3306/pinjamin"
 JWT_SECRET=rahasia_negara
@@ -255,28 +255,8 @@ Jalankan migrasi Prisma:
 npx prisma migrate dev --name init
 ```
 
-Buat akun admin pertama — buat file `create-admin.js` di folder `backend 2/`:
-```js
-const bcrypt = require('bcryptjs');
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+Buat akun admin pertama 
 
-async function main() {
-  const hash = await bcrypt.hash('admin', 10);
-  const user = await prisma.user.create({
-    data: {
-      nim: '00000000',
-      name: 'Admin',
-      email: 'admin@pinjamin.com',
-      passwordHash: hash,
-      role: 'admin'
-    }
-  });
-  console.log('Admin dibuat:', user.email);
-  await prisma.$disconnect();
-}
-
-main();
 ```
 
 Jalankan script:
@@ -440,7 +420,7 @@ pinjamin/
 
 ## 👥 Tim
 
-- Nama Anggota 1
+- Arya Gama
 - Nama Anggota 2
 - Nama Anggota 3
 
@@ -448,7 +428,7 @@ pinjamin/
 
 ## 📝 Catatan
 
-- Project ini dibuat untuk kebutuhan pembelajaran mata kuliah Sistem Terdistribusi
+- Project ini dibuat untuk kebutuhan pembelajaran
 - Akun admin dibuat manual via script `create-admin.js` — registrasi publik hanya untuk role user
 - Pengembalian menggunakan mekanisme dua tahap (pengajuan user → konfirmasi admin) untuk memastikan verifikasi fisik sebelum stok & status sistem diperbarui
 - Foto aset disimpan lokal di folder `backend/src/uploads/` dan diakses via endpoint `/uploads/`
