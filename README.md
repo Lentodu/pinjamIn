@@ -161,37 +161,39 @@ Halaman ringkasan untuk admin berisi:
 ### users
 | Field | Type | Keterangan |
 |---|---|---|
-| id | INT | Primary key |
+| id | INT | Primary key, auto increment |
 | nim | VARCHAR | NIM unik (8–12 digit angka) |
 | name | VARCHAR | Nama lengkap |
 | email | VARCHAR | Email unik |
 | passwordHash | VARCHAR | Password terenkripsi (bcrypt) |
-| role | STRING | admin / user |
+| role | STRING | `admin` / `user` (default: `user`) |
 
 ### items
 | Field | Type | Keterangan |
 |---|---|---|
-| id | INT | Primary key |
+| id | INT | Primary key, auto increment |
 | name | VARCHAR | Nama aset |
 | category | VARCHAR | Kategori aset |
 | description | TEXT | Deskripsi (nullable) |
 | photo | VARCHAR | Path foto aset (nullable) |
-| stock | INT | Jumlah stok tersedia |
-| status | STRING | tersedia / dipinjam / rusak |
-| qrCode | VARCHAR | String unik untuk QR label fisik |
+| stock | INT | Jumlah stok tersedia (default: 0) |
+| status | STRING | `tersedia` / `dipinjam` / `rusak` (default: `tersedia`) |
+| qrCode | VARCHAR | String unik auto-generated untuk label QR fisik (nullable, unique) |
 
 ### loans
 | Field | Type | Keterangan |
 |---|---|---|
-| id | INT | Primary key |
-| userId | INT | FK ke users |
-| itemId | INT | FK ke items |
-| qty | INT | Jumlah dipinjam |
-| borrowDate | DATETIME | Waktu peminjaman |
+| id | INT | Primary key, auto increment |
+| userId | INT | FK ke `users.id` |
+| itemId | INT | FK ke `items.id` |
+| qty | INT | Jumlah unit yang dipinjam |
+| borrowDate | DATETIME | Waktu peminjaman (default: now) |
 | dueDate | DATETIME | Batas waktu pengembalian |
-| returnDate | DATETIME | Waktu konfirmasi pengembalian (nullable) |
-| status | STRING | borrowed / pending_return / returned |
+| returnDate | DATETIME | Waktu konfirmasi pengembalian oleh admin (nullable) |
+| status | STRING | `borrowed` / `pending_return` / `returned` (default: `borrowed`) |
+| qrCode | VARCHAR | String unik untuk identifikasi transaksi via QR (nullable, unique) |
 
+> `pending_return` adalah status transisi: user sudah mengajukan pengembalian, tapi stok & status aset baru diperbarui setelah admin konfirmasi fisik barang.
 ---
 
 ## ⚙️ Setup & Installation
@@ -232,7 +234,7 @@ cd pinjamin
 
 Masuk ke folder backend:
 ```bash
-cd "backend 2"
+cd "backend"
 ```
 
 Install dependencies:
@@ -295,7 +297,7 @@ Backend berjalan di `http://localhost:3000`
 
 Buka terminal baru, masuk ke folder frontend:
 ```bash
-cd "frontend 2"
+cd "frontend"
 ```
 
 Install dependencies:
@@ -343,7 +345,7 @@ Password : admin
 ```text
 pinjamin/
 │
-├── backend 2/
+├── backend/
 │   ├── prisma/
 │   │   └── schema.prisma          # Database schema
 │   │
@@ -364,7 +366,7 @@ pinjamin/
 │   ├── .env
 │   └── package.json
 │
-├── frontend 2/
+├── frontend/
 │   └── src/
 │       ├── components/
 │       │   ├── Navbar.jsx         # Sidebar navigasi (admin & user)
@@ -449,5 +451,5 @@ pinjamin/
 - Project ini dibuat untuk kebutuhan pembelajaran mata kuliah Sistem Terdistribusi
 - Akun admin dibuat manual via script `create-admin.js` — registrasi publik hanya untuk role user
 - Pengembalian menggunakan mekanisme dua tahap (pengajuan user → konfirmasi admin) untuk memastikan verifikasi fisik sebelum stok & status sistem diperbarui
-- Foto aset disimpan lokal di folder `backend 2/src/uploads/` dan diakses via endpoint `/uploads/`
+- Foto aset disimpan lokal di folder `backend/src/uploads/` dan diakses via endpoint `/uploads/`
 - Export CSV menggunakan direct URL dengan token di query param — tidak melalui interceptor Axios
