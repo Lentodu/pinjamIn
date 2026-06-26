@@ -17,6 +17,7 @@ Sistem ini dirancang untuk membantu pengelolaan peminjaman peralatan dan aset mi
 - Express.js (Node.js)
 - Prisma ORM
 - JWT Authentication
+- Bcrypt.js
 
 ### Database
 - MySQL (via Laragon)
@@ -29,7 +30,7 @@ Sistem ini dirancang untuk membantu pengelolaan peminjaman peralatan dan aset mi
 ┌─────────────────────┐
 │     React App       │  → Frontend (port 5173)
 └─────────┬───────────┘
-          │ HTTP Request
+          │ HTTP Request (Axios + JWT)
           ▼
 ┌─────────────────────┐
 │   Express.js API    │  → Backend (port 3000)
@@ -38,7 +39,7 @@ Sistem ini dirancang untuk membantu pengelolaan peminjaman peralatan dan aset mi
 │   - Loan Routes     │
 │   - Report Routes   │
 └─────────┬───────────┘
-          │
+          │ Prisma ORM
           ▼
 ┌─────────────────────┐
 │       MySQL         │  → Database (port 3306)
@@ -52,23 +53,24 @@ Sistem ini dirancang untuk membantu pengelolaan peminjaman peralatan dan aset mi
 ## ✨ Features
 
 ### 🔐 Authentication
-- Register akun mahasiswa / staff
-- Login user
-- JWT-based authentication
-- Role-based access (Admin & User)
-- Setelah login, user diarahkan otomatis sesuai role: **Admin → halaman Laporan**, **User → daftar aset**
+- Register akun mahasiswa / staff (NIM wajib 8–12 digit angka)
+- Login dengan email & password
+- JWT-based authentication (token expire 60 menit)
+- Role-based access control: **Admin** dan **User**
+- Auto-redirect setelah login: **Admin → Dashboard**, **User → Daftar Barang**
+- Registrasi publik hanya bisa membuat akun **user** — akun admin dibuat manual via script
 
 ---
 
-### 🗂️ 1. Manajemen Data Aset Kampus (CRUD Barang)
+### 🗂️ 1. Manajemen Aset (CRUD Barang)
 
 #### Admin dapat:
-- **Create** — Tambah aset baru (nama, kategori, foto, stok)
+- **Create** — Tambah aset baru (nama, kategori, deskripsi, foto, stok)
 - **Read** — Lihat daftar & detail semua aset
-- **Update** — Edit data aset
-- **Delete** — Hapus aset
+- **Update** — Edit data aset termasuk status
+- **Delete** — Hapus aset (tidak bisa dihapus jika sedang dipinjam atau pending return)
 
-#### Kategori Aset Kampus:
+#### Kategori Aset:
 | Kategori | Contoh Barang |
 |---|---|
 | Elektronik | Proyektor, Laptop, Kamera, Mikrofon |
@@ -82,63 +84,75 @@ Sistem ini dirancang untuk membantu pengelolaan peminjaman peralatan dan aset mi
 |---|---|
 | Nama Barang | Nama aset kampus |
 | Kategori | Jenis aset |
-| Foto | Upload gambar barang |
+| Deskripsi | Keterangan tambahan (opsional) |
+| Foto | Upload gambar (maks 5MB) |
 | Stok | Jumlah unit tersedia |
 | Status | Tersedia / Dipinjam / Rusak |
+| QR Code | String unik auto-generated saat barang dibuat |
 
 ---
 
 ### 🔴 2. Status Aset Real-time
 
-Setiap aset memiliki status yang diperbarui otomatis:
-
 | Status | Keterangan |
 |---|---|
 | ✅ Tersedia | Aset bisa dipinjam |
-| 🔵 Dipinjam | Sedang dalam peminjaman |
-| ❌ Rusak | Tidak bisa dipinjam |
+| 🔵 Dipinjam | Sedang dalam peminjaman aktif |
+| ❌ Rusak | Tidak bisa dipinjam, dapat diset manual oleh admin |
 
-- Status berubah otomatis saat barang dipinjam atau saat pengembalian **dikonfirmasi admin**
-- Admin dapat mengubah status ke **Rusak** secara manual
+- Stok berkurang otomatis saat barang dipinjam
+- Stok bertambah kembali hanya setelah admin **konfirmasi** pengembalian
+- Admin bisa ubah status ke **Rusak** secara manual via form edit barang
 
 ---
 
-### 🔄 3. Sirkulasi Peminjaman
+### 🔄 3. Sirkulasi Peminjaman (Dua Tahap)
 
-Proses pengembalian melalui **dua tahap** — pengajuan oleh peminjam, lalu konfirmasi oleh admin setelah barang fisik diserahkan. Ini mencegah status sistem berubah "Tersedia" padahal barangnya belum benar-benar dikembalikan.
+Pengembalian melalui dua tahap untuk memastikan verifikasi fisik sebelum stok diperbarui.
 
-#### Check-out (Peminjaman):
-- Mahasiswa / staff memilih aset yang tersedia
-- Sistem mencatat nama peminjam & waktu peminjaman
+#### Tahap 1 — Peminjaman (User):
+- User buka detail barang → isi jumlah & tanggal kembali → klik **Pinjam Barang**
 - Stok berkurang otomatis
 - Status loan: **borrowed**
 
-#### Pengajuan Pengembalian (oleh User):
-- Peminjam klik **"Ajukan Pengembalian"** di halaman *Peminjaman Saya*
-- Status loan berubah jadi **pending_return** (menunggu konfirmasi)
-- Stok **belum** bertambah pada tahap ini
-- Peminjam menyerahkan barang fisik langsung ke admin
+#### Tahap 2 — Pengajuan Pengembalian (User):
+- User buka **Peminjaman Saya** → klik **Ajukan Pengembalian**
+- Status loan berubah jadi **pending_return**
+- Stok **belum** berubah
+- User menyerahkan barang fisik ke admin
 
-#### Konfirmasi Pengembalian (oleh Admin):
-- Admin mengecek fisik barang yang diserahkan
-- Admin klik **"Konfirmasi Diterima"** di halaman *Semua Peminjaman*
-- Stok bertambah otomatis, status loan berubah jadi **returned**
-- Status aset berubah kembali jadi **Tersedia**
-
-> Catatan: tahap konfirmasi admin ini sengaja ditambahkan supaya pengembalian tidak murni berdasarkan klaim sepihak dari peminjam — admin harus memverifikasi barang secara fisik sebelum stok & status sistem diperbarui.
+#### Tahap 3 — Konfirmasi Pengembalian (Admin):
+- Admin buka **Semua Peminjaman** → filter "Menunggu" → klik **Konfirmasi Diterima**
+- Stok bertambah otomatis
+- Status loan berubah jadi **returned**
 
 ---
 
-### 📊 4. Laporan Peminjaman
+### 📊 4. Dashboard Admin
+
+Halaman ringkasan untuk admin berisi:
+- Total aset terdaftar
+- Total pengguna aktif
+- Jumlah peminjaman aktif (borrowed + pending_return)
+- Jumlah menunggu konfirmasi pengembalian
+- Tabel peminjaman yang **terlambat** dikembalikan (melewati due date)
+- Tabel barang paling sering dipinjam
+
+---
+
+### 📋 5. Laporan Peminjaman
 
 #### Admin:
-- Lihat **seluruh riwayat peminjaman** (siapa meminjam apa dan kapan)
-- Filter berdasarkan status (dipinjam / menunggu konfirmasi / dikembalikan)
-- Ringkasan total transaksi, aktif, dan selesai
+- Lihat seluruh riwayat peminjaman dengan detail peminjam & barang
+- Filter berdasarkan **status** dan **periode tanggal**
+- Ringkasan total transaksi, dipinjam, menunggu konfirmasi, dikembalikan
+- Highlight baris merah untuk peminjaman yang **terlambat**
+- **Export ke CSV** — download file laporan sesuai filter aktif
 
-#### User (Mahasiswa/Staff):
-- Lihat **riwayat peminjaman sendiri**
-- Status peminjaman: aktif / menunggu konfirmasi admin / selesai
+#### User:
+- Lihat riwayat peminjaman sendiri
+- Filter berdasarkan status
+- Ajukan pengembalian langsung dari halaman ini
 
 ---
 
@@ -148,12 +162,11 @@ Proses pengembalian melalui **dua tahap** — pengajuan oleh peminjam, lalu konf
 | Field | Type | Keterangan |
 |---|---|---|
 | id | INT | Primary key |
-| name | VARCHAR | Nama user |
+| nim | VARCHAR | NIM unik (8–12 digit angka) |
+| name | VARCHAR | Nama lengkap |
 | email | VARCHAR | Email unik |
-| passwordHash | VARCHAR | Password terenkripsi |
+| passwordHash | VARCHAR | Password terenkripsi (bcrypt) |
 | role | STRING | admin / user |
-
----
 
 ### items
 | Field | Type | Keterangan |
@@ -161,12 +174,11 @@ Proses pengembalian melalui **dua tahap** — pengajuan oleh peminjam, lalu konf
 | id | INT | Primary key |
 | name | VARCHAR | Nama aset |
 | category | VARCHAR | Kategori aset |
-| description | TEXT | Deskripsi aset |
-| photo | VARCHAR | Path foto aset |
-| stock | INT | Jumlah stok |
+| description | TEXT | Deskripsi (nullable) |
+| photo | VARCHAR | Path foto aset (nullable) |
+| stock | INT | Jumlah stok tersedia |
 | status | STRING | tersedia / dipinjam / rusak |
-
----
+| qrCode | VARCHAR | String unik untuk QR label fisik |
 
 ### loans
 | Field | Type | Keterangan |
@@ -176,22 +188,30 @@ Proses pengembalian melalui **dua tahap** — pengajuan oleh peminjam, lalu konf
 | itemId | INT | FK ke items |
 | qty | INT | Jumlah dipinjam |
 | borrowDate | DATETIME | Waktu peminjaman |
-| returnDate | DATETIME | Waktu pengembalian (terisi saat admin konfirmasi) |
+| dueDate | DATETIME | Batas waktu pengembalian |
+| returnDate | DATETIME | Waktu konfirmasi pengembalian (nullable) |
 | status | STRING | borrowed / pending_return / returned |
-
-> `pending_return` adalah status transisi: peminjam sudah mengajukan pengembalian, tapi stok & status aset baru diperbarui setelah admin konfirmasi (lihat bagian Sirkulasi Peminjaman).
 
 ---
 
 ## ⚙️ Setup & Installation
 
-### 1. Prasyarat
-- [Node.js](https://nodejs.org) (versi LTS)
-- [Laragon](https://laragon.net) (sudah include MySQL + phpMyAdmin)
+### Prasyarat
+
+Pastikan sudah terinstall:
+- [Node.js](https://nodejs.org) versi LTS (direkomendasikan v18 atau v20)
+- [Laragon](https://laragon.net) (sudah include MySQL & phpMyAdmin)
+- Git
+
+Cek versi Node.js:
+```bash
+node -v
+npm -v
+```
 
 ---
 
-### 2. Clone Repository
+### 1. Clone Repository
 
 ```bash
 git clone <repo-url>
@@ -200,64 +220,109 @@ cd pinjamin
 
 ---
 
-### 3. Setup Database
+### 2. Setup Database
 
-1. Buka Laragon → Start All
-2. Buka phpMyAdmin di `http://localhost/phpmyadmin`
+1. Buka **Laragon** → klik **Start All**
+2. Buka **phpMyAdmin** di `http://localhost/phpmyadmin`
 3. Buat database baru bernama `pinjamin`
 
 ---
 
-### 4. Setup Backend
+### 3. Setup Backend
 
+Masuk ke folder backend:
 ```bash
-cd backend
+cd "backend 2"
+```
+
+Install dependencies:
+```bash
 npm install
 ```
 
-Buat file `.env`:
-
+Buat file `.env` di dalam folder `backend 2/`:
 ```env
 DATABASE_URL="mysql://root:@localhost:3306/pinjamin"
-JWT_SECRET=your_secret_key
+JWT_SECRET=rahasia_negara
 JWT_EXPIRES_IN=60m
 PORT=3000
 ```
 
-Jalankan migrasi database:
-
+Jalankan migrasi Prisma:
 ```bash
-npx prisma migrate dev
+npx prisma migrate dev --name init
 ```
 
-Buat akun admin pertama via phpMyAdmin (tab SQL):
+Buat akun admin pertama — buat file `create-admin.js` di folder `backend 2/`:
+```js
+const bcrypt = require('bcryptjs');
+const { PrismaClient } = require('@prisma/client');
+const prisma = new PrismaClient();
 
-```sql
-INSERT INTO User (name, email, passwordHash, role)
-VALUES ('Admin', 'admin@pinjamin.com', '$2b$10$XA5M8tCvX2XJFQf2dGnHae6Va.F.Lr7DrDEGlVK3tOLgsPo1Pjo9q', 'admin');
+async function main() {
+  const hash = await bcrypt.hash('admin', 10);
+  const user = await prisma.user.create({
+    data: {
+      nim: '00000000',
+      name: 'Admin',
+      email: 'admin@pinjamin.com',
+      passwordHash: hash,
+      role: 'admin'
+    }
+  });
+  console.log('Admin dibuat:', user.email);
+  await prisma.$disconnect();
+}
+
+main();
 ```
 
-> Password default: `admin`
+Jalankan script:
+```bash
+node create-admin.js
+```
 
 Jalankan backend:
-
 ```bash
 npm run dev
 ```
+
+Backend berjalan di `http://localhost:3000`
 
 ---
 
-### 5. Setup Frontend
+### 4. Setup Frontend
 
+Buka terminal baru, masuk ke folder frontend:
 ```bash
-cd frontend
+cd "frontend 2"
+```
+
+Install dependencies:
+```bash
 npm install
+```
+
+Jalankan frontend:
+```bash
 npm run dev
 ```
 
-Akses di:
+Frontend berjalan di `http://localhost:5173`
+
+---
+
+### 5. Akses Aplikasi
+
+Buka browser ke:
 ```
 http://localhost:5173
+```
+
+Login admin default:
+```
+Email    : admin@pinjamin.com
+Password : admin
 ```
 
 ---
@@ -266,8 +331,8 @@ http://localhost:5173
 
 | Service | Port |
 |---|---|
-| Frontend | 5173 |
-| Backend API | 3000 |
+| Frontend (Vite) | 5173 |
+| Backend API (Express) | 3000 |
 | MySQL | 3306 |
 | phpMyAdmin | 80 |
 
@@ -278,51 +343,54 @@ http://localhost:5173
 ```text
 pinjamin/
 │
-├── backend/
+├── backend 2/
 │   ├── prisma/
-│   │   └── schema.prisma        # Database schema
+│   │   └── schema.prisma          # Database schema
 │   │
 │   ├── src/
 │   │   ├── routes/
-│   │   │   ├── auth.js          # Register, Login
-│   │   │   ├── items.js         # CRUD Aset
-│   │   │   ├── loans.js         # Peminjaman, pengajuan & konfirmasi pengembalian
-│   │   │   └── reports.js       # Laporan & Riwayat
+│   │   │   ├── auth.js            # Register, Login
+│   │   │   ├── items.js           # CRUD Aset + upload foto + QR code
+│   │   │   ├── loans.js           # Peminjaman, pengajuan & konfirmasi pengembalian
+│   │   │   └── reports.js         # Dashboard, laporan, export CSV
 │   │   │
 │   │   ├── middleware/
-│   │   │   └── auth.js          # JWT Middleware
+│   │   │   └── auth.js            # JWT middleware + adminOnly guard
 │   │   │
-│   │   ├── uploads/             # Folder foto aset
-│   │   └── app.js               # Entry point
+│   │   ├── uploads/               # Folder foto aset (auto-created)
+│   │   └── app.js                 # Entry point Express
 │   │
+│   ├── create-admin.js            # Script buat akun admin pertama
 │   ├── .env
 │   └── package.json
 │
-├── frontend/
+├── frontend 2/
 │   └── src/
 │       ├── components/
-│       │   ├── Navbar.jsx
-│       │   └── ProtectedRoute.jsx
+│       │   ├── Navbar.jsx         # Sidebar navigasi (admin & user)
+│       │   └── ProtectedRoute.jsx # Guard route berdasarkan role
 │       │
 │       ├── pages/
-│       │   ├── Login.jsx            # Redirect sesuai role setelah login
-│       │   ├── Register.jsx
-│       │   ├── Dashboard.jsx        # Laporan admin
-│       │   ├── Items.jsx            # Daftar aset kampus
-│       │   ├── ItemDetail.jsx       # Detail aset & form pinjam
-│       │   ├── ItemForm.jsx         # Tambah/Edit aset (Admin)
-│       │   ├── Loans.jsx            # Semua peminjaman & konfirmasi pengembalian (Admin)
-│       │   └── MyLoans.jsx          # Riwayat & pengajuan pengembalian (User)
+│       │   ├── Login.jsx          # Form login
+│       │   ├── Register.jsx       # Form register (role user)
+│       │   ├── Dashboard.jsx      # Ringkasan statistik (admin)
+│       │   ├── Items.jsx          # Daftar aset kampus
+│       │   ├── ItemDetail.jsx     # Detail aset & form pinjam
+│       │   ├── ItemForm.jsx       # Tambah / edit aset (admin)
+│       │   ├── Loans.jsx          # Semua peminjaman & konfirmasi (admin)
+│       │   ├── MyLoans.jsx        # Riwayat & pengajuan pengembalian (user)
+│       │   ├── Reports.jsx        # Laporan lengkap + export CSV (admin)
+│       │   └── NotFound.jsx       # Halaman 404
 │       │
 │       ├── services/
-│       │   ├── api.js
-│       │   ├── authService.js
-│       │   └── itemService.js
+│       │   ├── api.js             # Axios instance + interceptor JWT
+│       │   ├── authService.js     # Login, register, logout
+│       │   └── itemService.js     # Semua API call (items, loans, reports)
 │       │
 │       ├── context/
-│       │   └── AuthContext.jsx
+│       │   └── AuthContext.jsx    # Global auth state
 │       │
-│       └── App.jsx
+│       └── App.jsx                # Router + layout sidebar
 │
 └── README.md
 ```
@@ -331,18 +399,40 @@ pinjamin/
 
 ## 🧪 Demo Scenario (Untuk Presentasi)
 
-1. **Login** sebagai Admin → otomatis diarahkan ke halaman **Laporan**
-2. Admin **tambah aset kampus** (proyektor, laptop, alat lab, dll)
-3. Admin lihat **daftar aset** dengan status real-time
-4. **Register** akun peminjam → **Login** sebagai User → otomatis diarahkan ke **daftar aset**
-5. User lihat daftar aset → pilih aset → buka detail → **pinjam**
-6. Status aset otomatis berubah jadi **Dipinjam**, stok berkurang
-7. User buka halaman **Peminjaman Saya** → klik **"Ajukan Pengembalian"**
-   - Status loan berubah jadi **Menunggu Konfirmasi Admin**, stok belum berubah
-8. User menyerahkan barang fisik ke Admin
-9. Admin buka halaman **Semua Peminjaman**, filter "Menunggu", klik **"Konfirmasi Diterima"**
-   - Stok bertambah, status aset kembali **Tersedia**, status loan jadi **Selesai**
-10. Admin buka **Laporan** → cek riwayat peminjaman ini sudah tercatat lengkap (waktu pinjam, waktu kembali, status)
+### Persiapan
+1. Pastikan Laragon running, backend & frontend sudah `npm run dev`
+2. Buka `http://localhost:5173`
+
+---
+
+### Sesi Admin
+
+3. **Login** dengan `admin@pinjamin.com` / `admin` → otomatis masuk ke **Dashboard**
+4. Dashboard menampilkan: total aset, total pengguna, peminjaman aktif, menunggu konfirmasi
+5. Klik **Tambah Barang** di sidebar → isi form (nama, kategori, stok, foto) → simpan
+6. Buka **Daftar Barang** → aset baru muncul dengan status **Tersedia**
+
+---
+
+### Sesi User
+
+7. Buka tab baru → **Register** akun baru (isi NIM 8 digit, nama, email, password)
+8. **Login** sebagai user → otomatis masuk ke **Daftar Barang**
+9. Pilih aset yang tersedia → klik **Detail**
+10. Isi jumlah & tanggal kembali → klik **Pinjam Barang**
+11. Stok berkurang otomatis, muncul pesan "Peminjaman berhasil"
+12. Buka **Peminjaman Saya** → status loan: **Aktif**
+13. Klik **Ajukan Pengembalian** → status berubah jadi **Menunggu Konfirmasi Admin**
+
+---
+
+### Kembali ke Admin
+
+14. Login kembali sebagai admin → buka **Semua Peminjaman**
+15. Filter "Menunggu" → muncul pengajuan pengembalian dari user tadi
+16. Klik **Konfirmasi Diterima** → stok bertambah, status jadi **Selesai**
+17. Buka **Laporan** → transaksi tadi muncul lengkap (peminjam, barang, waktu pinjam, waktu kembali)
+18. Klik **Export CSV** → file laporan ter-download sesuai filter aktif
 
 ---
 
@@ -357,7 +447,7 @@ pinjamin/
 ## 📝 Catatan
 
 - Project ini dibuat untuk kebutuhan pembelajaran mata kuliah Sistem Terdistribusi
-- Arsitektur monolithic dengan modular routing dipilih untuk kemudahan development
-- MySQL digunakan sebagai database utama via Laragon
-- Akun admin dibuat manual via phpMyAdmin, registrasi publik hanya untuk user biasa
-- Pengembalian aset menggunakan mekanisme dua tahap (pengajuan user → konfirmasi admin) untuk memastikan verifikasi fisik barang sebelum status & stok sistem diperbarui
+- Akun admin dibuat manual via script `create-admin.js` — registrasi publik hanya untuk role user
+- Pengembalian menggunakan mekanisme dua tahap (pengajuan user → konfirmasi admin) untuk memastikan verifikasi fisik sebelum stok & status sistem diperbarui
+- Foto aset disimpan lokal di folder `backend 2/src/uploads/` dan diakses via endpoint `/uploads/`
+- Export CSV menggunakan direct URL dengan token di query param — tidak melalui interceptor Axios
