@@ -49,8 +49,39 @@ router.post("/", authenticate, async (req, res) => {
   }
 });
 
-// PUT /api/loans/:id/return — User mengembalikan barang (check-in)
+// PUT /api/loans/:id/return — User mengajukan pengembalian (belum final)
+// Stok BELUM ditambah di sini — menunggu konfirmasi admin yang sudah cek fisik barang
 router.put("/:id/return", authenticate, async (req, res) => {
+  try {
+    const loan = await prisma.loan.findUnique({
+      where: { id: Number(req.params.id) },
+    });
+
+    if (!loan) return res.status(404).json({ message: "Data peminjaman tidak ditemukan" });
+    if (loan.status !== "borrowed") {
+      return res.status(400).json({ message: "Peminjaman ini tidak bisa diajukan untuk dikembalikan" });
+    }
+
+    // Hanya pemilik peminjaman atau admin yang boleh mengajukan pengembalian
+    if (req.user.role !== "admin" && loan.userId !== req.user.id) {
+      return res.status(403).json({ message: "Tidak diizinkan" });
+    }
+
+    const updatedLoan = await prisma.loan.update({
+      where: { id: Number(req.params.id) },
+      data: { status: "pending_return" },
+    });
+
+    res.json({ message: "Pengajuan pengembalian dikirim, menunggu konfirmasi admin", loan: updatedLoan });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// PUT /api/loans/:id/confirm-return — Admin only
+// Dipakai setelah admin cek fisik barang benar-benar diterima kembali
+router.put("/:id/confirm-return", authenticate, adminOnly, async (req, res) => {
   try {
     const loan = await prisma.loan.findUnique({
       where: { id: Number(req.params.id) },
@@ -58,13 +89,8 @@ router.put("/:id/return", authenticate, async (req, res) => {
     });
 
     if (!loan) return res.status(404).json({ message: "Data peminjaman tidak ditemukan" });
-    if (loan.status === "returned") {
-      return res.status(400).json({ message: "Barang sudah dikembalikan sebelumnya" });
-    }
-
-    // Hanya pemilik peminjaman atau admin yang boleh kembalikan
-    if (req.user.role !== "admin" && loan.userId !== req.user.id) {
-      return res.status(403).json({ message: "Tidak diizinkan" });
+    if (loan.status !== "pending_return") {
+      return res.status(400).json({ message: "Peminjaman ini belum diajukan untuk dikembalikan" });
     }
 
     const newStock = loan.item.stock + loan.qty;
@@ -83,7 +109,7 @@ router.put("/:id/return", authenticate, async (req, res) => {
       }),
     ]);
 
-    res.json({ message: "Pengembalian berhasil", loan: updatedLoan });
+    res.json({ message: "Pengembalian dikonfirmasi", loan: updatedLoan });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Server error" });

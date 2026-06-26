@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { AuthProvider } from "./context/AuthContext";
+import { AuthProvider, useAuth } from "./context/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Navbar from "./components/Navbar";
 import Login from "./pages/Login";
@@ -19,6 +19,14 @@ function Layout({ children }) {
       <main className="main-content">{children}</main>
     </>
   );
+}
+
+// Redirect path "/" sesuai role: admin -> laporan, user -> daftar barang
+function RootRedirect() {
+  const { user } = useAuth();
+  if (!user) return <Navigate to="/login" replace />;
+  if (user.role === "admin") return <Navigate to="/reports" replace />;
+  return <Navigate to="/items" replace />;
 }
 
 export default function App() {
@@ -50,7 +58,7 @@ export default function App() {
           <Route path="/reports" element={
             <ProtectedRoute adminOnly><Layout><Dashboard /></Layout></ProtectedRoute>
           } />
-          <Route path="/" element={<Navigate to="/items" replace />} />
+          <Route path="/" element={<RootRedirect />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>

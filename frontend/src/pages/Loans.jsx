@@ -1,5 +1,11 @@
 import { useEffect, useState } from "react";
-import { getAllLoans, returnItem } from "../services/itemService";
+import { getAllLoans, confirmReturn } from "../services/itemService";
+
+const STATUS_LABEL = {
+  borrowed: { label: "Dipinjam", className: "badge-blue" },
+  pending_return: { label: "Menunggu Konfirmasi", className: "badge-yellow" },
+  returned: { label: "Dikembalikan", className: "badge-green" },
+};
 
 export default function Loans() {
   const [loans, setLoans] = useState([]);
@@ -19,13 +25,13 @@ export default function Loans() {
 
   useEffect(() => { fetchLoans(); }, []);
 
-  const handleReturn = async (loanId) => {
-    if (!confirm("Konfirmasi pengembalian barang ini?")) return;
+  const handleConfirm = async (loanId) => {
+    if (!confirm("Konfirmasi barang sudah diterima fisiknya?")) return;
     try {
-      await returnItem(loanId);
+      await confirmReturn(loanId);
       fetchLoans();
     } catch (err) {
-      alert(err.response?.data?.message || "Gagal memproses pengembalian");
+      alert(err.response?.data?.message || "Gagal memproses konfirmasi");
     }
   };
 
@@ -38,13 +44,13 @@ export default function Loans() {
       <div className="page-header">
         <h2>Semua Peminjaman</h2>
         <div className="filter-group">
-          {["all", "borrowed", "returned"].map((f) => (
+          {["all", "borrowed", "pending_return", "returned"].map((f) => (
             <button
               key={f}
               className={filter === f ? "btn-primary" : "btn-secondary"}
               onClick={() => setFilter(f)}
             >
-              {f === "all" ? "Semua" : f === "borrowed" ? "Dipinjam" : "Dikembalikan"}
+              {f === "all" ? "Semua" : f === "borrowed" ? "Dipinjam" : f === "pending_return" ? "Menunggu" : "Dikembalikan"}
             </button>
           ))}
         </div>
@@ -67,30 +73,31 @@ export default function Loans() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((loan) => (
-                <tr key={loan.id}>
-                  <td>
-                    <strong>{loan.user?.name}</strong>
-                    <br /><small>{loan.user?.email}</small>
-                  </td>
-                  <td>{loan.item?.name}<br /><small>{loan.item?.category}</small></td>
-                  <td>{loan.qty}</td>
-                  <td>{new Date(loan.borrowDate).toLocaleDateString("id-ID")}</td>
-                  <td>{loan.returnDate ? new Date(loan.returnDate).toLocaleDateString("id-ID") : "-"}</td>
-                  <td>
-                    <span className={`badge ${loan.status === "borrowed" ? "badge-blue" : "badge-green"}`}>
-                      {loan.status === "borrowed" ? "Dipinjam" : "Dikembalikan"}
-                    </span>
-                  </td>
-                  <td>
-                    {loan.status === "borrowed" && (
-                      <button className="btn-secondary" onClick={() => handleReturn(loan.id)}>
-                        Kembalikan
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ))}
+              {filtered.map((loan) => {
+                const status = STATUS_LABEL[loan.status] || { label: loan.status, className: "badge-gray" };
+                return (
+                  <tr key={loan.id}>
+                    <td>
+                      <strong>{loan.user?.name}</strong>
+                      <br /><small>{loan.user?.email}</small>
+                    </td>
+                    <td>{loan.item?.name}<br /><small>{loan.item?.category}</small></td>
+                    <td>{loan.qty}</td>
+                    <td>{new Date(loan.borrowDate).toLocaleDateString("id-ID")}</td>
+                    <td>{loan.returnDate ? new Date(loan.returnDate).toLocaleDateString("id-ID") : "-"}</td>
+                    <td>
+                      <span className={`badge ${status.className}`}>{status.label}</span>
+                    </td>
+                    <td>
+                      {loan.status === "pending_return" && (
+                        <button className="btn-secondary" onClick={() => handleConfirm(loan.id)}>
+                          Konfirmasi Diterima
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

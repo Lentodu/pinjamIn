@@ -18,7 +18,7 @@ export default function Login() {
     try {
       const user = await login(email, password);
       setUser(user);
-      navigate("/items");
+      navigate(user.role === "admin" ? "/reports" : "/items");
     } catch (err) {
       setError(err.response?.data?.message || "Login gagal");
     } finally {

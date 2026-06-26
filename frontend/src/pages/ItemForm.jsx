@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { getItem, createItem, updateItem } from "../services/itemService";
 
-const CATEGORIES = ["Elektronik", "Furnitur", "Alat Tulis", "Olahraga", "Lainnya"];
+const CATEGORIES = ["Elektronik", "Alat Lab", "Alat Praktikum", "Furnitur", "Lainnya"];
 const STATUSES = ["tersedia", "dipinjam", "rusak"];
 
 export default function ItemForm() {
