@@ -56,6 +56,7 @@ Sistem ini dirancang untuk membantu pengelolaan peminjaman peralatan dan aset mi
 - Login user
 - JWT-based authentication
 - Role-based access (Admin & User)
+- Setelah login, user diarahkan otomatis sesuai role: **Admin → halaman Laporan**, **User → daftar aset**
 
 ---
 
@@ -97,24 +98,34 @@ Setiap aset memiliki status yang diperbarui otomatis:
 | 🔵 Dipinjam | Sedang dalam peminjaman |
 | ❌ Rusak | Tidak bisa dipinjam |
 
-- Status berubah otomatis saat barang dipinjam atau dikembalikan
+- Status berubah otomatis saat barang dipinjam atau saat pengembalian **dikonfirmasi admin**
 - Admin dapat mengubah status ke **Rusak** secara manual
 
 ---
 
 ### 🔄 3. Sirkulasi Peminjaman
 
+Proses pengembalian melalui **dua tahap** — pengajuan oleh peminjam, lalu konfirmasi oleh admin setelah barang fisik diserahkan. Ini mencegah status sistem berubah "Tersedia" padahal barangnya belum benar-benar dikembalikan.
+
 #### Check-out (Peminjaman):
 - Mahasiswa / staff memilih aset yang tersedia
 - Sistem mencatat nama peminjam & waktu peminjaman
 - Stok berkurang otomatis
-- Status aset berubah jadi **Dipinjam**
+- Status loan: **borrowed**
 
-#### Check-in (Pengembalian):
-- Peminjam melakukan pengembalian aset
-- Sistem mencatat waktu pengembalian
-- Stok bertambah otomatis
+#### Pengajuan Pengembalian (oleh User):
+- Peminjam klik **"Ajukan Pengembalian"** di halaman *Peminjaman Saya*
+- Status loan berubah jadi **pending_return** (menunggu konfirmasi)
+- Stok **belum** bertambah pada tahap ini
+- Peminjam menyerahkan barang fisik langsung ke admin
+
+#### Konfirmasi Pengembalian (oleh Admin):
+- Admin mengecek fisik barang yang diserahkan
+- Admin klik **"Konfirmasi Diterima"** di halaman *Semua Peminjaman*
+- Stok bertambah otomatis, status loan berubah jadi **returned**
 - Status aset berubah kembali jadi **Tersedia**
+
+> Catatan: tahap konfirmasi admin ini sengaja ditambahkan supaya pengembalian tidak murni berdasarkan klaim sepihak dari peminjam — admin harus memverifikasi barang secara fisik sebelum stok & status sistem diperbarui.
 
 ---
 
@@ -122,12 +133,12 @@ Setiap aset memiliki status yang diperbarui otomatis:
 
 #### Admin:
 - Lihat **seluruh riwayat peminjaman** (siapa meminjam apa dan kapan)
-- Filter berdasarkan status (dipinjam / dikembalikan)
+- Filter berdasarkan status (dipinjam / menunggu konfirmasi / dikembalikan)
 - Ringkasan total transaksi, aktif, dan selesai
 
 #### User (Mahasiswa/Staff):
 - Lihat **riwayat peminjaman sendiri**
-- Status peminjaman aktif & selesai
+- Status peminjaman: aktif / menunggu konfirmasi admin / selesai
 
 ---
 
@@ -165,8 +176,10 @@ Setiap aset memiliki status yang diperbarui otomatis:
 | itemId | INT | FK ke items |
 | qty | INT | Jumlah dipinjam |
 | borrowDate | DATETIME | Waktu peminjaman |
-| returnDate | DATETIME | Waktu pengembalian |
-| status | STRING | borrowed / returned |
+| returnDate | DATETIME | Waktu pengembalian (terisi saat admin konfirmasi) |
+| status | STRING | borrowed / pending_return / returned |
+
+> `pending_return` adalah status transisi: peminjam sudah mengajukan pengembalian, tapi stok & status aset baru diperbarui setelah admin konfirmasi (lihat bagian Sirkulasi Peminjaman).
 
 ---
 
@@ -273,7 +286,7 @@ pinjamin/
 │   │   ├── routes/
 │   │   │   ├── auth.js          # Register, Login
 │   │   │   ├── items.js         # CRUD Aset
-│   │   │   ├── loans.js         # Peminjaman & Pengembalian
+│   │   │   ├── loans.js         # Peminjaman, pengajuan & konfirmasi pengembalian
 │   │   │   └── reports.js       # Laporan & Riwayat
 │   │   │
 │   │   ├── middleware/
@@ -292,14 +305,14 @@ pinjamin/
 │       │   └── ProtectedRoute.jsx
 │       │
 │       ├── pages/
-│       │   ├── Login.jsx
+│       │   ├── Login.jsx            # Redirect sesuai role setelah login
 │       │   ├── Register.jsx
 │       │   ├── Dashboard.jsx        # Laporan admin
 │       │   ├── Items.jsx            # Daftar aset kampus
 │       │   ├── ItemDetail.jsx       # Detail aset & form pinjam
 │       │   ├── ItemForm.jsx         # Tambah/Edit aset (Admin)
-│       │   ├── Loans.jsx            # Semua peminjaman (Admin)
-│       │   └── MyLoans.jsx          # Riwayat peminjaman user
+│       │   ├── Loans.jsx            # Semua peminjaman & konfirmasi pengembalian (Admin)
+│       │   └── MyLoans.jsx          # Riwayat & pengajuan pengembalian (User)
 │       │
 │       ├── services/
 │       │   ├── api.js
@@ -318,15 +331,18 @@ pinjamin/
 
 ## 🧪 Demo Scenario (Untuk Presentasi)
 
-1. **Login** sebagai Admin
+1. **Login** sebagai Admin → otomatis diarahkan ke halaman **Laporan**
 2. Admin **tambah aset kampus** (proyektor, laptop, alat lab, dll)
 3. Admin lihat **daftar aset** dengan status real-time
-4. **Register** akun mahasiswa baru → **Login** sebagai User
-5. User lihat daftar aset → pilih aset → **pinjam**
+4. **Register** akun peminjam → **Login** sebagai User → otomatis diarahkan ke **daftar aset**
+5. User lihat daftar aset → pilih aset → buka detail → **pinjam**
 6. Status aset otomatis berubah jadi **Dipinjam**, stok berkurang
-7. Admin lihat **laporan peminjaman** (siapa meminjam apa dan kapan)
-8. User **kembalikan aset**
-9. Status kembali **Tersedia**, stok terupdate
+7. User buka halaman **Peminjaman Saya** → klik **"Ajukan Pengembalian"**
+   - Status loan berubah jadi **Menunggu Konfirmasi Admin**, stok belum berubah
+8. User menyerahkan barang fisik ke Admin
+9. Admin buka halaman **Semua Peminjaman**, filter "Menunggu", klik **"Konfirmasi Diterima"**
+   - Stok bertambah, status aset kembali **Tersedia**, status loan jadi **Selesai**
+10. Admin buka **Laporan** → cek riwayat peminjaman ini sudah tercatat lengkap (waktu pinjam, waktu kembali, status)
 
 ---
 
@@ -344,3 +360,4 @@ pinjamin/
 - Arsitektur monolithic dengan modular routing dipilih untuk kemudahan development
 - MySQL digunakan sebagai database utama via Laragon
 - Akun admin dibuat manual via phpMyAdmin, registrasi publik hanya untuk user biasa
+- Pengembalian aset menggunakan mekanisme dua tahap (pengajuan user → konfirmasi admin) untuk memastikan verifikasi fisik barang sebelum status & stok sistem diperbarui
