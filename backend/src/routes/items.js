@@ -2,6 +2,7 @@ const express = require("express");
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
+const crypto = require("crypto"); // Modul bawaan Node.js buat bikin QR string
 const { PrismaClient } = require("@prisma/client");
 const { authenticate, adminOnly } = require("../middleware/auth");
 
@@ -57,6 +58,8 @@ router.post("/", authenticate, adminOnly, upload.single("photo"), async (req, re
 
   try {
     const photo = req.file ? `/uploads/${req.file.filename}` : null;
+    const qrCode = crypto.randomUUID(); // Bikin string unik buat QR fisik barang
+
     const item = await prisma.item.create({
       data: {
         name,
@@ -65,6 +68,7 @@ router.post("/", authenticate, adminOnly, upload.single("photo"), async (req, re
         photo,
         stock: parseInt(stock),
         status: "tersedia",
+        qrCode: qrCode, // Simpan ke database
       },
     });
     res.status(201).json({ message: "Barang berhasil ditambahkan", item });
@@ -104,14 +108,37 @@ router.put("/:id", authenticate, adminOnly, upload.single("photo"), async (req, 
 
 // DELETE /api/items/:id — Admin only
 router.delete("/:id", authenticate, adminOnly, async (req, res) => {
+  const itemId = Number(req.params.id);
+
   try {
-    const existing = await prisma.item.findUnique({ where: { id: Number(req.params.id) } });
+    const existing = await prisma.item.findUnique({ where: { id: itemId } });
     if (!existing) return res.status(404).json({ message: "Barang tidak ditemukan" });
 
-    await prisma.item.delete({ where: { id: Number(req.params.id) } });
+    // Cek apakah ada transaksi yang masih aktif (belum beres)
+    const activeLoan = await prisma.loan.findFirst({
+      where: {
+        itemId: itemId,
+        status: { in: ["borrowed", "pending_return"] }
+      }
+    });
+
+    if (activeLoan) {
+      return res.status(400).json({ 
+        message: "Barang tidak bisa dihapus karena sedang dipinjam atau menunggu konfirmasi pengembalian." 
+      });
+    }
+
+    await prisma.item.delete({ where: { id: itemId } });
     res.json({ message: "Barang berhasil dihapus" });
+    
   } catch (err) {
     console.error(err);
+    // Tangkap error relasi database (kalau barang punya riwayat peminjaman yang udah 'returned')
+    if (err.code === 'P2003') {
+      return res.status(400).json({ 
+        message: "Barang tidak bisa dihapus karena memiliki riwayat transaksi peminjaman. Cukup ubah stok jadi 0 atau statusnya." 
+      });
+    }
     res.status(500).json({ message: "Server error" });
   }
 });

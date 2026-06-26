@@ -15,6 +15,7 @@ export default function ItemDetail() {
   const { user } = useAuth();
   const [item, setItem] = useState(null);
   const [qty, setQty] = useState(1);
+  const [dueDate, setDueDate] = useState("");
   const [loading, setLoading] = useState(true);
   const [borrowing, setBorrowing] = useState(false);
   const [message, setMessage] = useState("");
@@ -27,11 +28,11 @@ export default function ItemDetail() {
   }, [id]);
 
   const handleBorrow = async () => {
-    if (qty < 1 || qty > item.stock) return;
+    if (qty < 1 || qty > item.stock || !dueDate) return;
     setBorrowing(true);
     setMessage("");
     try {
-      await borrowItem(item.id, qty);
+      await borrowItem(item.id, qty, dueDate);
       setMessage("Peminjaman berhasil!");
       const updated = await getItem(id);
       setItem(updated);
@@ -78,6 +79,13 @@ export default function ItemDetail() {
                 max={item.stock}
                 value={qty}
                 onChange={(e) => setQty(Number(e.target.value))}
+              />
+              <label>Tanggal kembali:</label>
+              <input
+                type="date"
+                value={dueDate}
+                min={new Date().toISOString().split("T")[0]}
+                onChange={(e) => setDueDate(e.target.value)}
               />
               <button onClick={handleBorrow} className="btn-primary" disabled={borrowing}>
                 {borrowing ? "Memproses..." : "Pinjam Barang"}

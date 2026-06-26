@@ -9,6 +9,7 @@ datasource db {
 
 model User {
   id           Int    @id @default(autoincrement())
+  nim          String @unique
   name         String
   email        String @unique
   passwordHash String
@@ -24,6 +25,7 @@ model Item {
   photo       String?
   stock       Int     @default(0)
   status      String  @default("tersedia")
+  qrCode      String? @unique
   loans       Loan[]
 }
 
@@ -33,8 +35,10 @@ model Loan {
   itemId     Int
   qty        Int
   borrowDate DateTime  @default(now())
+  dueDate    DateTime
   returnDate DateTime?
   status     String    @default("borrowed")
+  qrCode     String?   @unique
   user       User      @relation(fields: [userId], references: [id])
   item       Item      @relation(fields: [itemId], references: [id])
 }

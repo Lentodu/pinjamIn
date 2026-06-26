@@ -3,7 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { register } from "../services/authService";
 
 export default function Register() {
-  const [form, setForm] = useState({ name: "", email: "", password: "", role: "user" });
+  const [form, setForm] = useState({ name: "", nim: "", email: "", password: "" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -15,9 +15,15 @@ export default function Register() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
+
+    if (!/^\d{8,12}$/.test(form.nim)) {
+      setError("NIM harus berupa angka 8-12 digit");
+      return;
+    }
+
     setLoading(true);
     try {
-      await register(form.name, form.email, form.password, form.role);
+      await register(form.name, form.nim, form.email, form.password);
       navigate("/login");
     } catch (err) {
       setError(err.response?.data?.message || "Registrasi gagal");
@@ -34,7 +40,7 @@ export default function Register() {
         {error && <p className="error-msg">{error}</p>}
         <form onSubmit={handleSubmit}>
           <div className="form-group">
-            <label>Nama</label>
+            <label>Nama Lengkap</label>
             <input
               type="text"
               name="name"
@@ -42,6 +48,18 @@ export default function Register() {
               onChange={handleChange}
               placeholder="Nama lengkap"
               required
+            />
+          </div>
+          <div className="form-group">
+            <label>NIM</label>
+            <input
+              type="text"
+              name="nim"
+              value={form.nim}
+              onChange={handleChange}
+              placeholder="Nomor Induk Mahasiswa"
+              required
+              inputMode="numeric"
             />
           </div>
           <div className="form-group">

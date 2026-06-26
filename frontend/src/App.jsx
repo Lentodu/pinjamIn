@@ -5,11 +5,13 @@ import Navbar from "./components/Navbar";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
+import Reports from "./pages/Reports";
 import Items from "./pages/Items";
 import ItemDetail from "./pages/ItemDetail";
 import ItemForm from "./pages/ItemForm";
 import Loans from "./pages/Loans";
 import MyLoans from "./pages/MyLoans";
+import NotFound from "./pages/NotFound";
 import "./App.css";
 
 function Layout({ children }) {
@@ -21,11 +23,11 @@ function Layout({ children }) {
   );
 }
 
-// Redirect path "/" sesuai role: admin -> laporan, user -> daftar barang
+// Admin -> dashboard, user -> daftar barang
 function RootRedirect() {
   const { user } = useAuth();
   if (!user) return <Navigate to="/login" replace />;
-  if (user.role === "admin") return <Navigate to="/reports" replace />;
+  if (user.role === "admin") return <Navigate to="/dashboard" replace />;
   return <Navigate to="/items" replace />;
 }
 
@@ -55,10 +57,15 @@ export default function App() {
           <Route path="/my-loans" element={
             <ProtectedRoute><Layout><MyLoans /></Layout></ProtectedRoute>
           } />
-          <Route path="/reports" element={
+          <Route path="/dashboard" element={
             <ProtectedRoute adminOnly><Layout><Dashboard /></Layout></ProtectedRoute>
           } />
+          <Route path="/reports" element={
+            <ProtectedRoute adminOnly><Layout><Reports /></Layout></ProtectedRoute>
+          } />
+
           <Route path="/" element={<RootRedirect />} />
+          <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>

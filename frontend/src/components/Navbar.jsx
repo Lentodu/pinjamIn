@@ -21,6 +21,7 @@ export default function Navbar() {
           <>
             <Link to="/items/new">Tambah Barang</Link>
             <Link to="/loans">Semua Peminjaman</Link>
+            <Link to="/dashboard">Dashboard</Link>
             <Link to="/reports">Laporan</Link>
           </>
         )}
