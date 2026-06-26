@@ -40,29 +40,16 @@ export default function Reports() {
     fetchReport(reset);
   };
 
-  const handleExport = async () => {
-    setExporting(true);
-    try {
-      const query = new URLSearchParams();
-      if (filters.status) query.set("status", filters.status);
-      if (filters.startDate) query.set("startDate", filters.startDate);
-      if (filters.endDate) query.set("endDate", filters.endDate);
+  const handleExport = () => {
+    const query = new URLSearchParams();
+    if (filters.status) query.set("status", filters.status);
+    if (filters.startDate) query.set("startDate", filters.startDate);
+    if (filters.endDate) query.set("endDate", filters.endDate);
 
-      const res = await api.get(`/reports/export${query.toString() ? `?${query}` : ""}`, {
-        responseType: "blob",
-      });
+    const token = localStorage.getItem("token");
+    if (token) query.set("token", token);
 
-      const url = URL.createObjectURL(new Blob([res.data]));
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "laporan-peminjaman.csv";
-      a.click();
-      URL.revokeObjectURL(url);
-    } catch {
-      alert("Gagal mengekspor laporan");
-    } finally {
-      setExporting(false);
-    }
+    window.open(`http://localhost:3000/api/reports/export?${query.toString()}`, "_blank");
   };
 
   return (

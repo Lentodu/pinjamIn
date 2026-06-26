@@ -107,4 +107,67 @@ router.get("/items", authenticate, adminOnly, async (req, res) => {
   }
 });
 
+// GET /api/reports/export — Admin: export CSV
+router.get("/export", async (req, res) => {
+  const { status, startDate, endDate, token } = req.query;
+
+  // Auth via query token (karena ini dibuka langsung di browser)
+  if (!token) return res.status(401).json({ message: "Token tidak ditemukan" });
+  try {
+    const jwt = require("jsonwebtoken");
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || "rahasia_negara");
+    if (decoded.role !== "admin") return res.status(403).json({ message: "Akses ditolak" });
+  } catch {
+    return res.status(401).json({ message: "Token tidak valid" });
+  }
+
+  const where = {};
+  const validStatuses = ["borrowed", "pending_return", "returned"];
+  if (status && validStatuses.includes(status)) where.status = status;
+  if (startDate || endDate) {
+    where.borrowDate = {};
+    if (startDate) where.borrowDate.gte = new Date(startDate);
+    if (endDate) {
+      const end = new Date(endDate);
+      end.setHours(23, 59, 59, 999);
+      where.borrowDate.lte = end;
+    }
+  }
+
+  try {
+    const loans = await prisma.loan.findMany({
+      where,
+      include: {
+        user: { select: { nim: true, name: true, email: true } },
+        item: { select: { name: true, category: true } },
+      },
+      orderBy: { borrowDate: "desc" },
+    });
+
+    const rows = [
+      ["No", "NIM", "Nama", "Email", "Barang", "Kategori", "Qty", "Tgl Pinjam", "Tgl Kembali", "Status"],
+      ...loans.map((l, i) => [
+        i + 1,
+        l.user.nim,
+        l.user.name,
+        l.user.email,
+        l.item.name,
+        l.item.category,
+        l.qty,
+        new Date(l.borrowDate).toLocaleDateString("id-ID"),
+        l.returnDate ? new Date(l.returnDate).toLocaleDateString("id-ID") : "-",
+        l.status,
+      ]),
+    ];
+
+    const csv = rows.map((r) => r.join(",")).join("\n");
+    res.setHeader("Content-Type", "text/csv");
+    res.setHeader("Content-Disposition", "attachment; filename=laporan.csv");
+    res.send(csv);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
 module.exports = router;

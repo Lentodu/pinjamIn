@@ -16,14 +16,13 @@ import "./App.css";
 
 function Layout({ children }) {
   return (
-    <>
+    <div className="app-layout">
       <Navbar />
       <main className="main-content">{children}</main>
-    </>
+    </div>
   );
 }
 
-// Admin -> dashboard, user -> daftar barang
 function RootRedirect() {
   const { user } = useAuth();
   if (!user) return <Navigate to="/login" replace />;
