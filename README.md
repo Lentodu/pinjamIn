@@ -96,13 +96,14 @@ Sistem ini dirancang untuk membantu pengelolaan peminjaman peralatan dan aset mi
 
 | Status | Keterangan |
 |---|---|
-| ✅ Tersedia | Aset bisa dipinjam |
-| 🔵 Dipinjam | Sedang dalam peminjaman aktif |
-| ❌ Rusak | Tidak bisa dipinjam, dapat diset manual oleh admin |
+| ✅ Tersedia | Aset bisa dipinjam (stok > 0) |
+| 🔵 Dipinjam | Stok aset sedang 0 (semua unit sedang dipinjam) |
+| ❌ Rusak | Tidak bisa dipinjam, diset manual oleh admin |
 
+- **Status "Tersedia"/"Dipinjam" dihitung otomatis secara live dari stok** (stok 0 → "Dipinjam", stok > 0 → "Tersedia") di halaman **Daftar Barang** maupun **Detail Barang**, sehingga badge status selalu sinkron dengan stok aktual
+- Status **"Rusak"** tetap murni keputusan manual admin lewat form edit barang, tidak terpengaruh oleh nilai stok
 - Stok berkurang otomatis saat barang dipinjam
 - Stok bertambah kembali hanya setelah admin **konfirmasi** pengembalian
-- Admin bisa ubah status ke **Rusak** secara manual via form edit barang
 
 ---
 
@@ -112,31 +113,39 @@ Pengembalian melalui dua tahap untuk memastikan verifikasi fisik sebelum stok di
 
 #### Tahap 1 — Peminjaman (User):
 - User buka detail barang → isi jumlah & tanggal kembali → klik **Pinjam Barang**
+- Validasi tanggal kembali:
+  - Jika tanggal kembali belum diisi, muncul pesan peringatan berwarna merah **"Masukkan tanggal pengembalian"**
+  - Tanggal kembali **tidak bisa dipilih sebelum hari ini** (date picker otomatis membatasi, dan divalidasi ulang di server)
 - Stok berkurang otomatis
-- Status loan: **borrowed**
+- Status loan: **borrowed** (ditampilkan sebagai **"Dipinjam"**)
 
 #### Tahap 2 — Pengajuan Pengembalian (User):
-- User buka **Peminjaman Saya** → klik **Ajukan Pengembalian**
-- Status loan berubah jadi **pending_return**
+- User buka **Peminjaman Saya** → setiap item menampilkan tanggal pinjam dan **tanggal kembali (batas waktu)** yang diisi saat meminjam → klik **Ajukan Pengembalian**
+- Status loan berubah jadi **pending_return** (ditampilkan sebagai **"Menunggu Konfirmasi Admin"**)
 - Stok **belum** berubah
 - User menyerahkan barang fisik ke admin
 
 #### Tahap 3 — Konfirmasi Pengembalian (Admin):
-- Admin buka **Semua Peminjaman** → filter "Menunggu" → klik **Konfirmasi Diterima**
+- Admin buka **Semua Peminjaman** → filter **"Menunggu Konfirmasi Admin"** → klik **Konfirmasi Diterima**
 - Stok bertambah otomatis
-- Status loan berubah jadi **returned**
+- Status loan berubah jadi **returned** (ditampilkan sebagai **"Dikembalikan"**)
+
+> Tabel **Semua Peminjaman** (admin) menampilkan kolom **Batas Kembali** (tanggal jatuh tempo yang diisi user) terpisah dari kolom **Tgl Kembali** (tanggal aktual saat admin konfirmasi), lengkap dengan tanda ⚠️ untuk peminjaman yang sudah lewat batas waktu tapi belum dikembalikan.
 
 ---
 
 ### 📊 4. Dashboard Admin
+
+Navigasi **Dashboard** ditempatkan paling atas di sidebar, di atas menu lainnya.
 
 Halaman ringkasan untuk admin berisi:
 - Total aset terdaftar
 - Total pengguna aktif
 - Jumlah peminjaman aktif (borrowed + pending_return)
 - Jumlah menunggu konfirmasi pengembalian
-- Tabel peminjaman yang **terlambat** dikembalikan (melewati due date)
-- Tabel barang paling sering dipinjam
+- Jumlah sudah dikembalikan
+- Tabel peminjaman yang **terlambat** dikembalikan (melewati due date), lengkap nama & NIM peminjam serta nama barang
+- Tabel barang paling sering dipinjam (top 5, dihitung dari seluruh riwayat peminjaman)
 
 ---
 
@@ -144,14 +153,16 @@ Halaman ringkasan untuk admin berisi:
 
 #### Admin:
 - Lihat seluruh riwayat peminjaman dengan detail peminjam & barang
-- Filter berdasarkan **status** dan **periode tanggal**
-- Ringkasan total transaksi, dipinjam, menunggu konfirmasi, dikembalikan
+- Filter berdasarkan **status** (dengan label filter **"Menunggu Konfirmasi Admin"** untuk status pending_return) dan **periode tanggal**
+- Ringkasan card: total transaksi, dipinjam, **menunggu konfirmasi** (jumlahnya sudah akurat sesuai data pending_return), dikembalikan
+- Tabel detail menampilkan kolom **Batas Kembali** dan **Tgl Kembali** secara terpisah
 - Highlight baris merah untuk peminjaman yang **terlambat**
 - **Export ke CSV** — download file laporan sesuai filter aktif
 
 #### User:
-- Lihat riwayat peminjaman sendiri
-- Filter berdasarkan status
+- Lihat riwayat peminjaman sendiri, lengkap dengan tanggal pinjam dan tanggal kembali (batas waktu)
+- Status ditampilkan sebagai **"Dipinjam"**, **"Menunggu Konfirmasi Admin"**, atau **"Dikembalikan"**
+- Filter berdasarkan status (label filter mengikuti penamaan status di atas)
 - Ajukan pengembalian langsung dari halaman ini
 
 ---
@@ -177,7 +188,7 @@ Halaman ringkasan untuk admin berisi:
 | description | TEXT | Deskripsi (nullable) |
 | photo | VARCHAR | Path foto aset (nullable) |
 | stock | INT | Jumlah stok tersedia (default: 0) |
-| status | STRING | `tersedia` / `dipinjam` / `rusak` (default: `tersedia`) |
+| status | STRING | `tersedia` / `dipinjam` / `rusak` (default: `tersedia`) — nilai `tersedia`/`dipinjam` hanya relevan sebagai fallback; tampilan di frontend dihitung live dari `stock` |
 | qrCode | VARCHAR | String unik auto-generated untuk label QR fisik (nullable, unique) |
 
 ### loans
@@ -188,7 +199,7 @@ Halaman ringkasan untuk admin berisi:
 | itemId | INT | FK ke `items.id` |
 | qty | INT | Jumlah unit yang dipinjam |
 | borrowDate | DATETIME | Waktu peminjaman (default: now) |
-| dueDate | DATETIME | Batas waktu pengembalian |
+| dueDate | DATETIME | Batas waktu pengembalian (tidak boleh sebelum tanggal hari ini saat dibuat) |
 | returnDate | DATETIME | Waktu konfirmasi pengembalian oleh admin (nullable) |
 | status | STRING | `borrowed` / `pending_return` / `returned` (default: `borrowed`) |
 | qrCode | VARCHAR | String unik untuk identifikasi transaksi via QR (nullable, unique) |
@@ -349,15 +360,15 @@ pinjamin/
 ├── frontend/
 │   └── src/
 │       ├── components/
-│       │   ├── Navbar.jsx         # Sidebar navigasi (admin & user)
+│       │   ├── Navbar.jsx         # Sidebar navigasi (Dashboard di atas, lalu Menu)
 │       │   └── ProtectedRoute.jsx # Guard route berdasarkan role
 │       │
 │       ├── pages/
 │       │   ├── Login.jsx          # Form login
 │       │   ├── Register.jsx       # Form register (role user)
 │       │   ├── Dashboard.jsx      # Ringkasan statistik (admin)
-│       │   ├── Items.jsx          # Daftar aset kampus
-│       │   ├── ItemDetail.jsx     # Detail aset & form pinjam
+│       │   ├── Items.jsx          # Daftar aset kampus (status live dari stok)
+│       │   ├── ItemDetail.jsx     # Detail aset & form pinjam (validasi tanggal kembali)
 │       │   ├── ItemForm.jsx       # Tambah / edit aset (admin)
 │       │   ├── Loans.jsx          # Semua peminjaman & konfirmasi (admin)
 │       │   ├── MyLoans.jsx        # Riwayat & pengajuan pengembalian (user)
@@ -390,9 +401,9 @@ pinjamin/
 ### Sesi Admin
 
 3. **Login** dengan `admin@pinjamin.com` / `admin` → otomatis masuk ke **Dashboard**
-4. Dashboard menampilkan: total aset, total pengguna, peminjaman aktif, menunggu konfirmasi
-5. Klik **Tambah Barang** di sidebar → isi form (nama, kategori, stok, foto) → simpan
-6. Buka **Daftar Barang** → aset baru muncul dengan status **Tersedia**
+4. Dashboard menampilkan: total aset, total pengguna, peminjaman aktif, menunggu konfirmasi, sudah dikembalikan, tabel keterlambatan, dan barang paling sering dipinjam
+5. Klik **Tambah Barang** di sidebar (Dashboard ada paling atas, menu lain di bawahnya) → isi form (nama, kategori, stok, foto) → simpan
+6. Buka **Daftar Barang** → aset baru muncul dengan status **Tersedia** (status ini otomatis berubah jadi **Dipinjam** begitu stoknya 0, tanpa perlu admin edit manual)
 
 ---
 
@@ -401,35 +412,36 @@ pinjamin/
 7. Buka tab baru → **Register** akun baru (isi NIM 8 digit, nama, email, password)
 8. **Login** sebagai user → otomatis masuk ke **Daftar Barang**
 9. Pilih aset yang tersedia → klik **Detail**
-10. Isi jumlah & tanggal kembali → klik **Pinjam Barang**
-11. Stok berkurang otomatis, muncul pesan "Peminjaman berhasil"
-12. Buka **Peminjaman Saya** → status loan: **Aktif**
-13. Klik **Ajukan Pengembalian** → status berubah jadi **Menunggu Konfirmasi Admin**
+10. Coba klik **Pinjam Barang** tanpa mengisi tanggal kembali → muncul pesan merah **"Masukkan tanggal pengembalian"**
+11. Isi jumlah & tanggal kembali (tanggal sebelum hari ini tidak bisa dipilih) → klik **Pinjam Barang**
+12. Stok berkurang otomatis, muncul pesan "Peminjaman berhasil"
+13. Buka **Peminjaman Saya** → status loan: **Dipinjam**, beserta tanggal kembali yang sudah diisi
+14. Klik **Ajukan Pengembalian** → status berubah jadi **Menunggu Konfirmasi Admin**
 
 ---
 
 ### Kembali ke Admin
 
-14. Login kembali sebagai admin → buka **Semua Peminjaman**
-15. Filter "Menunggu" → muncul pengajuan pengembalian dari user tadi
-16. Klik **Konfirmasi Diterima** → stok bertambah, status jadi **Selesai**
-17. Buka **Laporan** → transaksi tadi muncul lengkap (peminjam, barang, waktu pinjam, waktu kembali)
-18. Klik **Export CSV** → file laporan ter-download sesuai filter aktif
+15. Login kembali sebagai admin → buka **Semua Peminjaman**
+16. Filter **"Menunggu Konfirmasi Admin"** → muncul pengajuan pengembalian dari user tadi, lengkap kolom **Batas Kembali**
+17. Klik **Konfirmasi Diterima** → stok bertambah, status jadi **Dikembalikan**
+18. Buka **Laporan** → transaksi tadi muncul lengkap (peminjam, barang, waktu pinjam, batas kembali, waktu kembali), dan card ringkasan **menunggu konfirmasi** menampilkan angka yang akurat
+19. Klik **Export CSV** → file laporan ter-download sesuai filter aktif
 
 ---
 
 ## 👥 Tim
 
 - Arya Gama
-- Nama Anggota 2
-- Nama Anggota 3
+
 
 ---
 
 ## 📝 Catatan
 
-- Project ini dibuat untuk kebutuhan pembelajaran
+- Project ini dibuat untuk kebutuhan pembelajaran saja
 - Akun admin dibuat manual via script `create-admin.js` — registrasi publik hanya untuk role user
 - Pengembalian menggunakan mekanisme dua tahap (pengajuan user → konfirmasi admin) untuk memastikan verifikasi fisik sebelum stok & status sistem diperbarui
+- Status "Tersedia"/"Dipinjam" pada aset dihitung live dari nilai stok, bukan field manual — hanya status "Rusak" yang masih bisa diset manual oleh admin
 - Foto aset disimpan lokal di folder `backend/src/uploads/` dan diakses via endpoint `/uploads/`
 - Export CSV menggunakan direct URL dengan token di query param — tidak melalui interceptor Axios
