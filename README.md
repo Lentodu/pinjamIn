@@ -268,10 +268,8 @@ npx prisma migrate dev --name init
 ```
 
 Buat akun admin pertama 
-
-```
-
 Jalankan script:
+```
 ```bash
 node create-admin.js
 ```
