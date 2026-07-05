@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { getReports } from "../services/itemService";
 import api from "../services/api";
-import { IconBarChart, IconArrowUpRight, IconClock, IconCheckCircle } from "../components/Icons";
+import { IconBarChart, IconArrowUpRight, IconClock, IconCheckCircle, IconAlertTriangle } from "../components/Icons";
 
 const STATUS_LABEL = {
   borrowed: { label: "Dipinjam", className: "badge-blue" },
@@ -186,7 +186,7 @@ export default function Reports() {
                         <td>{new Date(loan.borrowDate).toLocaleDateString("id-ID")}</td>
                         <td className={isOverdue ? "text-danger" : ""}>
                           {new Date(loan.dueDate).toLocaleDateString("id-ID")}
-                          {isOverdue && " ⚠️"}
+                          {isOverdue && <IconAlertTriangle width={14} height={14} className="icon-inline-danger" />}
                         </td>
                         <td>{loan.returnDate ? new Date(loan.returnDate).toLocaleDateString("id-ID") : "-"}</td>
                         <td>

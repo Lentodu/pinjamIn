@@ -2,9 +2,11 @@ import { useEffect, useState } from "react";
 import { getMyLoans, returnItem } from "../services/itemService";
 
 const STATUS_LABEL = {
+  pending: { label: "Menunggu Konfirmasi Peminjaman", className: "badge-yellow" },
   borrowed: { label: "Dipinjam", className: "badge-blue" },
-  pending_return: { label: "Menunggu Konfirmasi Admin", className: "badge-yellow" },
+  pending_return: { label: "Menunggu Konfirmasi Pengembalian", className: "badge-yellow" },
   returned: { label: "Dikembalikan", className: "badge-green" },
+  rejected: { label: "Ditolak", className: "badge-red" },
 };
 
 export default function MyLoans() {
@@ -44,13 +46,13 @@ export default function MyLoans() {
       <div className="page-header">
         <h2>Peminjaman Saya</h2>
         <div className="filter-group">
-          {["all", "borrowed", "pending_return", "returned"].map((f) => (
+          {["all", "pending", "borrowed", "pending_return", "returned", "rejected"].map((f) => (
             <button
               key={f}
               className={filter === f ? "btn-primary" : "btn-secondary"}
               onClick={() => setFilter(f)}
             >
-              {f === "all" ? "Semua" : f === "borrowed" ? "Dipinjam" : f === "pending_return" ? "Menunggu Konfirmasi Admin" : "Dikembalikan"}
+              {f === "all" ? "Semua" : STATUS_LABEL[f]?.label || f}
             </button>
           ))}
         </div>
@@ -81,6 +83,9 @@ export default function MyLoans() {
                     <p>Dikembalikan: {new Date(loan.returnDate).toLocaleDateString("id-ID")}</p>
                   )}
                   <span className={`badge ${status.className}`}>{status.label}</span>
+                  {loan.status === "pending" && (
+                    <p className="info-msg">Silakan datang ke tempat peminjaman untuk konfirmasi admin.</p>
+                  )}
                   {loan.status === "pending_return" && (
                     <p className="info-msg">Serahkan barang ke admin untuk dikonfirmasi.</p>
                   )}

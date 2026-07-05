@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { getUserDetail } from "../services/itemService";
+import { IconAlertTriangle } from "../components/Icons";
 
 const STATUS_LABEL = {
   pending: { label: "Menunggu Konfirmasi Peminjaman", className: "badge-yellow" },
@@ -90,7 +91,7 @@ export default function UserDetail() {
                     <td>{new Date(loan.borrowDate).toLocaleDateString("id-ID")}</td>
                     <td className={terlambat ? "text-danger" : ""}>
                       {new Date(loan.dueDate).toLocaleDateString("id-ID")}
-                      {terlambat && " ⚠️"}
+                      {terlambat && <IconAlertTriangle width={14} height={14} className="icon-inline-danger" />}
                     </td>
                     <td>{loan.returnDate ? new Date(loan.returnDate).toLocaleDateString("id-ID") : "-"}</td>
                     <td>
