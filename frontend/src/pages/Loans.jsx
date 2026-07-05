@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import { getAllLoans, confirmReturn, confirmLoan, rejectLoan } from "../services/itemService";
+import { IconAlertTriangle } from "../components/Icons";
 
 const STATUS_LABEL = {
   pending: { label: "Menunggu Konfirmasi Peminjaman", className: "badge-yellow" },
   borrowed: { label: "Dipinjam", className: "badge-blue" },
-  pending_return: { label: "Menunggu Konfirmasi", className: "badge-yellow" },
+  pending_return: { label: "Menunggu Konfirmasi Pengembalian", className: "badge-yellow" },
   returned: { label: "Dikembalikan", className: "badge-green" },
   rejected: { label: "Ditolak", className: "badge-red" },
 };
@@ -109,7 +110,9 @@ export default function Loans() {
                     <td>{new Date(loan.borrowDate).toLocaleDateString("id-ID")}</td>
                     <td className={["borrowed", "pending_return"].includes(loan.status) && new Date(loan.dueDate) < new Date() ? "text-danger" : ""}>
                       {new Date(loan.dueDate).toLocaleDateString("id-ID")}
-                      {["borrowed", "pending_return"].includes(loan.status) && new Date(loan.dueDate) < new Date() && " ⚠️"}
+                      {["borrowed", "pending_return"].includes(loan.status) && new Date(loan.dueDate) < new Date() && (
+                        <IconAlertTriangle width={14} height={14} className="icon-inline-danger" />
+                      )}
                     </td>
                     <td>{loan.returnDate ? new Date(loan.returnDate).toLocaleDateString("id-ID") : "-"}</td>
                     <td>
