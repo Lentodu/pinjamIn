@@ -351,6 +351,14 @@ a { color: #2563eb; text-decoration: none; }
 .detail-actions { margin-top: 1.25rem; }
 
 .action-group { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.search-form { display: flex; gap: 0.5rem; }
+.search-form input {
+  padding: 0.55rem 0.85rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  min-width: 240px;
+}
 
 /* ── Loans ── */
 .loans-list { display: flex; flex-direction: column; gap: 0.875rem; }

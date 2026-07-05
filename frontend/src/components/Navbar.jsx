@@ -47,6 +47,9 @@ export default function Navbar() {
             <Link to="/items/new" className={`sidebar-link ${isActive("/items/new") ? "active" : ""}`}>
               <span>Tambah Barang</span>
             </Link>
+            <Link to="/users" className={`sidebar-link ${isActive("/users") ? "active" : ""}`}>
+              <span>Daftar User</span>
+            </Link>
           </>
         )}
       </div>

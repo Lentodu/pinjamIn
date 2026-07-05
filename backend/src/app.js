@@ -8,6 +8,7 @@ const authRoutes = require("./routes/auth");
 const itemRoutes = require("./routes/items");
 const loanRoutes = require("./routes/loans");
 const reportRoutes = require("./routes/reports");
+const userRoutes = require("./routes/users");
 
 const app = express();
 
@@ -22,6 +23,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/items", itemRoutes);
 app.use("/api/loans", loanRoutes);
 app.use("/api/reports", reportRoutes);
+app.use("/api/users", userRoutes);
 
 // Health check
 app.get("/", (req, res) => {

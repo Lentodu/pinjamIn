@@ -11,6 +11,7 @@ import ItemDetail from "./pages/ItemDetail";
 import ItemForm from "./pages/ItemForm";
 import Loans from "./pages/Loans";
 import MyLoans from "./pages/MyLoans";
+import Users from "./pages/Users";
 import NotFound from "./pages/NotFound";
 import "./App.css";
 
@@ -55,6 +56,9 @@ export default function App() {
           } />
           <Route path="/my-loans" element={
             <ProtectedRoute><Layout><MyLoans /></Layout></ProtectedRoute>
+          } />
+          <Route path="/users" element={
+            <ProtectedRoute adminOnly><Layout><Users /></Layout></ProtectedRoute>
           } />
           <Route path="/dashboard" element={
             <ProtectedRoute adminOnly><Layout><Dashboard /></Layout></ProtectedRoute>

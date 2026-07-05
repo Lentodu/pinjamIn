@@ -66,6 +66,17 @@ export const getAllLoans = async (status = "") => {
   return res.data;
 };
 
+// ── Users ──────────────────────────────────────────
+export const getUsers = async (search = "") => {
+  const res = await api.get(`/users${search ? `?search=${encodeURIComponent(search)}` : ""}`);
+  return res.data;
+};
+
+export const getUserDetail = async (id) => {
+  const res = await api.get(`/users/${id}`);
+  return res.data;
+};
+
 // ── Dashboard ──────────────────────────────────────────
 export const getDashboard = async () => {
   const res = await api.get("/reports/dashboard");
