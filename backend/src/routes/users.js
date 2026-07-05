@@ -8,15 +8,18 @@ const prisma = new PrismaClient();
 // GET /api/users — Admin: lihat semua user
 router.get("/", authenticate, adminOnly, async (req, res) => {
   const { search } = req.query;
-  const where = search
-    ? {
-        OR: [
-          { name: { contains: search, mode: "insensitive" } },
-          { email: { contains: search, mode: "insensitive" } },
-          { nim: { contains: search, mode: "insensitive" } },
-        ],
-      }
-    : {};
+  const where = {
+    role: "user", // Hanya tampilkan akun user (peminjam), akun admin tidak ikut ditampilkan
+    ...(search
+      ? {
+          OR: [
+            { name: { contains: search, mode: "insensitive" } },
+            { email: { contains: search, mode: "insensitive" } },
+            { nim: { contains: search, mode: "insensitive" } },
+          ],
+        }
+      : {}),
+  };
 
   try {
     const users = await prisma.user.findMany({

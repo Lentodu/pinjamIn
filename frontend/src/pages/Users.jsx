@@ -56,11 +56,12 @@ export default function Users() {
                 <th>Email</th>
                 <th>Role</th>
                 <th>Total Peminjaman</th>
+                <th>Aksi</th>
               </tr>
             </thead>
             <tbody>
               {users.map((u) => (
-                <tr key={u.id} className="clickable-row" onClick={() => navigate(`/users/${u.id}`)}>
+                <tr key={u.id}>
                   <td>{u.nim}</td>
                   <td>{u.name}</td>
                   <td>{u.email}</td>
@@ -70,6 +71,11 @@ export default function Users() {
                     </span>
                   </td>
                   <td>{u._count?.loans ?? 0}</td>
+                  <td>
+                    <button className="btn-secondary" onClick={() => navigate(`/users/${u.id}`)}>
+                      Detail
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
