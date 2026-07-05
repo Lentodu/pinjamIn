@@ -350,6 +350,8 @@ a { color: #2563eb; text-decoration: none; }
 .borrow-form input:focus { border-color: #2563eb; }
 .detail-actions { margin-top: 1.25rem; }
 
+.action-group { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+
 /* ── Loans ── */
 .loans-list { display: flex; flex-direction: column; gap: 0.875rem; }
 .loan-card {

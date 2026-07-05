@@ -54,7 +54,7 @@ export default function ItemDetail() {
     setMessage("");
     try {
       await borrowItem(item.id, qty, dueDate);
-      setMessage("Peminjaman berhasil!");
+      setMessage("Pengajuan peminjaman berhasil. Silakan datang ke tempat peminjaman untuk konfirmasi admin.");
       setMessageType("info");
       const updated = await getItem(id);
       setItem(updated);

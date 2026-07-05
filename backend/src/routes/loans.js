@@ -33,17 +33,19 @@ router.post("/", authenticate, async (req, res) => {
         itemId: Number(itemId),
         qty: Number(qty),
         dueDate: new Date(dueDate),
-        status: "borrowed",
+        status: "pending",
         borrowDate: new Date(),
       },
     });
 
+    // Stok langsung dikurangi (di-reserve) supaya tidak bisa dipinjam ganda
+    // selama menunggu konfirmasi admin. Jika admin menolak, stok dikembalikan.
     await prisma.item.update({
       where: { id: Number(itemId) },
       data: { stock: item.stock - Number(qty) },
     });
 
-    res.status(201).json({ message: "Peminjaman berhasil", loan });
+    res.status(201).json({ message: "Pengajuan peminjaman berhasil, silakan datang ke tempat peminjaman untuk konfirmasi admin", loan });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Server error" });
@@ -83,6 +85,49 @@ router.get("/", authenticate, adminOnly, async (req, res) => {
       orderBy: { borrowDate: "desc" },
     });
     res.json(loans);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// PUT /api/loans/:id/confirm — Admin: konfirmasi peminjaman (pending -> borrowed)
+router.put("/:id/confirm", authenticate, adminOnly, async (req, res) => {
+  try {
+    const loan = await prisma.loan.findUnique({ where: { id: Number(req.params.id) } });
+    if (!loan) return res.status(404).json({ message: "Peminjaman tidak ditemukan" });
+    if (loan.status !== "pending") return res.status(400).json({ message: "Status tidak valid untuk dikonfirmasi" });
+
+    const updated = await prisma.loan.update({
+      where: { id: Number(req.params.id) },
+      data: { status: "borrowed" },
+    });
+
+    res.json({ message: "Peminjaman dikonfirmasi", loan: updated });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// PUT /api/loans/:id/reject — Admin: tolak peminjaman (pending -> rejected), stok dikembalikan
+router.put("/:id/reject", authenticate, adminOnly, async (req, res) => {
+  try {
+    const loan = await prisma.loan.findUnique({ where: { id: Number(req.params.id) } });
+    if (!loan) return res.status(404).json({ message: "Peminjaman tidak ditemukan" });
+    if (loan.status !== "pending") return res.status(400).json({ message: "Status tidak valid untuk ditolak" });
+
+    const updated = await prisma.loan.update({
+      where: { id: Number(req.params.id) },
+      data: { status: "rejected" },
+    });
+
+    await prisma.item.update({
+      where: { id: loan.itemId },
+      data: { stock: { increment: loan.qty } },
+    });
+
+    res.json({ message: "Peminjaman ditolak", loan: updated });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Server error" });

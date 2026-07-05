@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
-import { getAllLoans, confirmReturn } from "../services/itemService";
+import { getAllLoans, confirmReturn, confirmLoan, rejectLoan } from "../services/itemService";
 
 const STATUS_LABEL = {
+  pending: { label: "Menunggu Konfirmasi Peminjaman", className: "badge-yellow" },
   borrowed: { label: "Dipinjam", className: "badge-blue" },
   pending_return: { label: "Menunggu Konfirmasi", className: "badge-yellow" },
   returned: { label: "Dikembalikan", className: "badge-green" },
+  rejected: { label: "Ditolak", className: "badge-red" },
 };
 
 export default function Loans() {
@@ -25,13 +27,33 @@ export default function Loans() {
 
   useEffect(() => { fetchLoans(); }, []);
 
-  const handleConfirm = async (loanId) => {
+  const handleConfirmReturn = async (loanId) => {
     if (!confirm("Konfirmasi barang sudah diterima fisiknya?")) return;
     try {
       await confirmReturn(loanId);
       fetchLoans();
     } catch (err) {
       alert(err.response?.data?.message || "Gagal memproses konfirmasi");
+    }
+  };
+
+  const handleConfirmLoan = async (loanId) => {
+    if (!confirm("Konfirmasi peminjaman ini? Pastikan peminjam sudah datang ke tempat peminjaman.")) return;
+    try {
+      await confirmLoan(loanId);
+      fetchLoans();
+    } catch (err) {
+      alert(err.response?.data?.message || "Gagal memproses konfirmasi");
+    }
+  };
+
+  const handleRejectLoan = async (loanId) => {
+    if (!confirm("Tolak pengajuan peminjaman ini? Stok akan dikembalikan.")) return;
+    try {
+      await rejectLoan(loanId);
+      fetchLoans();
+    } catch (err) {
+      alert(err.response?.data?.message || "Gagal memproses penolakan");
     }
   };
 
@@ -44,13 +66,13 @@ export default function Loans() {
       <div className="page-header">
         <h2>Semua Peminjaman</h2>
         <div className="filter-group">
-          {["all", "borrowed", "pending_return", "returned"].map((f) => (
+          {["all", "pending", "borrowed", "pending_return", "returned", "rejected"].map((f) => (
             <button
               key={f}
               className={filter === f ? "btn-primary" : "btn-secondary"}
               onClick={() => setFilter(f)}
             >
-              {f === "all" ? "Semua" : f === "borrowed" ? "Dipinjam" : f === "pending_return" ? "Menunggu Konfirmasi Admin" : "Dikembalikan"}
+              {f === "all" ? "Semua" : STATUS_LABEL[f]?.label || f}
             </button>
           ))}
         </div>
@@ -94,8 +116,18 @@ export default function Loans() {
                       <span className={`badge ${status.className}`}>{status.label}</span>
                     </td>
                     <td>
+                      {loan.status === "pending" && (
+                        <div className="action-group">
+                          <button className="btn-primary" onClick={() => handleConfirmLoan(loan.id)}>
+                            Konfirmasi Peminjaman
+                          </button>
+                          <button className="btn-secondary" onClick={() => handleRejectLoan(loan.id)}>
+                            Tolak
+                          </button>
+                        </div>
+                      )}
                       {loan.status === "pending_return" && (
-                        <button className="btn-secondary" onClick={() => handleConfirm(loan.id)}>
+                        <button className="btn-secondary" onClick={() => handleConfirmReturn(loan.id)}>
                           Konfirmasi Diterima
                         </button>
                       )}

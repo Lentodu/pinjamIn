@@ -36,6 +36,16 @@ export const borrowItem = async (itemId, qty, dueDate) => {
   return res.data;
 };
 
+export const confirmLoan = async (loanId) => {
+  const res = await api.put(`/loans/${loanId}/confirm`);
+  return res.data;
+};
+
+export const rejectLoan = async (loanId) => {
+  const res = await api.put(`/loans/${loanId}/reject`);
+  return res.data;
+};
+
 export const returnItem = async (loanId) => {
   const res = await api.put(`/loans/${loanId}/return`);
   return res.data;
