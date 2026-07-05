@@ -7,6 +7,7 @@ export default function Navbar() {
   const location = useLocation();
 
   const handleLogout = () => {
+    if (!confirm("Yakin ingin keluar?")) return;
     logout();
     navigate("/login");
   };
