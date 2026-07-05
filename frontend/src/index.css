@@ -360,6 +360,20 @@ a { color: #2563eb; text-decoration: none; }
   min-width: 240px;
 }
 
+.clickable-row { cursor: pointer; }
+.clickable-row:hover td { background: #f1f5f9; }
+.stat-row { display: flex; gap: 1rem; margin-top: 1.25rem; flex-wrap: wrap; }
+.stat-box {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 0.85rem 1.25rem;
+  min-width: 130px;
+  text-align: center;
+}
+.stat-number { font-size: 1.5rem; font-weight: 700; color: #1e293b; }
+.stat-label { font-size: 0.78rem; color: #64748b; margin-top: 0.15rem; }
+
 /* ── Loans ── */
 .loans-list { display: flex; flex-direction: column; gap: 0.875rem; }
 .loan-card {
