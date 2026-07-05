@@ -468,9 +468,6 @@ pinjamin/
 
 ## 👥 Tim
 
-- Arya Gama
-
-
 ---
 
 ## 📝 Catatan
