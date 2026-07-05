@@ -39,6 +39,7 @@ Sistem ini dirancang untuk membantu pengelolaan peminjaman peralatan dan aset mi
 │   - Item Routes     │
 │   - Loan Routes     │
 │   - Report Routes   │
+│   - User Routes     │
 └─────────┬───────────┘
           │ Prisma ORM
           ▼
@@ -69,7 +70,7 @@ Sistem ini dirancang untuk membantu pengelolaan peminjaman peralatan dan aset mi
 - **Create** — Tambah aset baru (nama, kategori, deskripsi, foto, stok)
 - **Read** — Lihat daftar & detail semua aset
 - **Update** — Edit data aset termasuk status
-- **Delete** — Hapus aset (tidak bisa dihapus jika sedang dipinjam atau pending return)
+- **Delete** — Hapus aset (tidak bisa dihapus jika masih ada peminjaman yang aktif: menunggu konfirmasi peminjaman, sedang dipinjam, atau menunggu konfirmasi pengembalian)
 
 #### Kategori Aset:
 | Kategori | Contoh Barang |
@@ -98,40 +99,48 @@ Sistem ini dirancang untuk membantu pengelolaan peminjaman peralatan dan aset mi
 | Status | Keterangan |
 |---|---|
 | ✅ Tersedia | Aset bisa dipinjam (stok > 0) |
-| 🔵 Dipinjam | Stok aset sedang 0 (semua unit sedang dipinjam) |
+| 🔵 Dipinjam | Stok aset sedang 0 (semua unit sedang dipinjam / direservasi) |
 | ❌ Rusak | Tidak bisa dipinjam, diset manual oleh admin |
 
 - **Status "Tersedia"/"Dipinjam" dihitung otomatis secara live dari stok** (stok 0 → "Dipinjam", stok > 0 → "Tersedia") di halaman **Daftar Barang** maupun **Detail Barang**, sehingga badge status selalu sinkron dengan stok aktual
 - Status **"Rusak"** tetap murni keputusan manual admin lewat form edit barang, tidak terpengaruh oleh nilai stok
-- Stok berkurang otomatis saat barang dipinjam
-- Stok bertambah kembali hanya setelah admin **konfirmasi** pengembalian
+- Stok langsung berkurang (direservasi) begitu user mengajukan peminjaman, **sebelum** admin konfirmasi — supaya barang yang sama tidak bisa diajukan pinjam dobel
+- Jika admin **menolak** pengajuan peminjaman, stok dikembalikan otomatis
+- Stok bertambah kembali (untuk alur pengembalian) hanya setelah admin **konfirmasi** pengembalian
 
 ---
 
-### 🔄 3. Sirkulasi Peminjaman (Dua Tahap)
+### 🔄 3. Sirkulasi Peminjaman (Konfirmasi Dua Arah)
 
-Pengembalian melalui dua tahap untuk memastikan verifikasi fisik sebelum stok diperbarui.
+Baik peminjaman maupun pengembalian sama-sama melalui mekanisme pengajuan → konfirmasi admin, untuk memastikan verifikasi fisik barang di kedua ujung transaksi.
 
-#### Tahap 1 — Peminjaman (User):
+#### Tahap 1 — Pengajuan Peminjaman (User):
 - User buka detail barang → isi jumlah & tanggal kembali → klik **Pinjam Barang**
 - Validasi tanggal kembali:
   - Jika tanggal kembali belum diisi, muncul pesan peringatan berwarna merah **"Masukkan tanggal pengembalian"**
   - Tanggal kembali **tidak bisa dipilih sebelum hari ini** (date picker otomatis membatasi, dan divalidasi ulang di server)
-- Stok berkurang otomatis
-- Status loan: **borrowed** (ditampilkan sebagai **"Dipinjam"**)
+- Stok langsung berkurang (direservasi) begitu diajukan
+- Status loan: **pending** (ditampilkan sebagai **"Menunggu Konfirmasi Admin"**)
+- Muncul keterangan: *"Silakan datang ke tempat peminjaman untuk konfirmasi admin."*
 
-#### Tahap 2 — Pengajuan Pengembalian (User):
-- User buka **Peminjaman Saya** → setiap item menampilkan tanggal pinjam dan **tanggal kembali (batas waktu)** yang diisi saat meminjam → klik **Ajukan Pengembalian**
+#### Tahap 2 — Konfirmasi / Penolakan Peminjaman (Admin):
+- User datang membawa/menunjukkan diri secara fisik ke tempat peminjaman
+- Admin buka **Semua Peminjaman** → filter **"Menunggu Konfirmasi Peminjaman"** → pilih salah satu:
+  - **Konfirmasi Peminjaman** → status berubah jadi **borrowed** (**"Dipinjam"**), stok tetap berkurang (sudah direservasi sejak pengajuan)
+  - **Tolak** → status berubah jadi **rejected** (**"Ditolak"**), stok dikembalikan otomatis
+
+#### Tahap 3 — Pengajuan Pengembalian (User):
+- User buka **Peminjaman Saya** → setiap item menampilkan tanggal pinjam dan **tanggal kembali (batas waktu)** yang diisi saat meminjam → klik **Ajukan Pengembalian** (hanya muncul untuk loan berstatus **borrowed**)
 - Status loan berubah jadi **pending_return** (ditampilkan sebagai **"Menunggu Konfirmasi Admin"**)
 - Stok **belum** berubah
 - User menyerahkan barang fisik ke admin
 
-#### Tahap 3 — Konfirmasi Pengembalian (Admin):
-- Admin buka **Semua Peminjaman** → filter **"Menunggu Konfirmasi Admin"** → klik **Konfirmasi Diterima**
+#### Tahap 4 — Konfirmasi Pengembalian (Admin):
+- Admin buka **Semua Peminjaman** → filter **"Menunggu Konfirmasi"** (pengembalian) → klik **Konfirmasi Diterima**
 - Stok bertambah otomatis
 - Status loan berubah jadi **returned** (ditampilkan sebagai **"Dikembalikan"**)
 
-> Tabel **Semua Peminjaman** (admin) menampilkan kolom **Batas Kembali** (tanggal jatuh tempo yang diisi user) terpisah dari kolom **Tgl Kembali** (tanggal aktual saat admin konfirmasi), lengkap dengan tanda ⚠️ untuk peminjaman yang sudah lewat batas waktu tapi belum dikembalikan.
+> Tabel **Semua Peminjaman** (admin) menampilkan kolom **Batas Kembali** (tanggal jatuh tempo yang diisi user) terpisah dari kolom **Tgl Kembali** (tanggal aktual saat admin konfirmasi pengembalian), lengkap dengan tanda ⚠️ untuk peminjaman yang sudah lewat batas waktu tapi belum dikembalikan.
 
 ---
 
@@ -142,7 +151,8 @@ Navigasi **Dashboard** ditempatkan paling atas di sidebar, di atas menu lainnya.
 Halaman ringkasan untuk admin berisi:
 - Total aset terdaftar
 - Total pengguna aktif
-- Jumlah peminjaman aktif (borrowed + pending_return)
+- Jumlah peminjaman aktif (pending + borrowed + pending_return)
+- Jumlah menunggu konfirmasi peminjaman
 - Jumlah menunggu konfirmasi pengembalian
 - Jumlah sudah dikembalikan
 - Tabel peminjaman yang **terlambat** dikembalikan (melewati due date), lengkap nama & NIM peminjam serta nama barang
@@ -154,17 +164,29 @@ Halaman ringkasan untuk admin berisi:
 
 #### Admin:
 - Lihat seluruh riwayat peminjaman dengan detail peminjam & barang
-- Filter berdasarkan **status** (dengan label filter **"Menunggu Konfirmasi Admin"** untuk status pending_return) dan **periode tanggal**
-- Ringkasan card: total transaksi, dipinjam, **menunggu konfirmasi** (jumlahnya sudah akurat sesuai data pending_return), dikembalikan
+- Filter berdasarkan **status** (`pending`, `borrowed`, `pending_return`, `returned`, `rejected`) dan **periode tanggal**
+- Ringkasan card: total transaksi, menunggu konfirmasi peminjaman, dipinjam, menunggu konfirmasi pengembalian, dikembalikan, ditolak
 - Tabel detail menampilkan kolom **Batas Kembali** dan **Tgl Kembali** secara terpisah
 - Highlight baris merah untuk peminjaman yang **terlambat**
 - **Export ke CSV** — download file laporan sesuai filter aktif
 
 #### User:
 - Lihat riwayat peminjaman sendiri, lengkap dengan tanggal pinjam dan tanggal kembali (batas waktu)
-- Status ditampilkan sebagai **"Dipinjam"**, **"Menunggu Konfirmasi Admin"**, atau **"Dikembalikan"**
+- Status ditampilkan sebagai **"Menunggu Konfirmasi Admin"** (pending/pending_return), **"Dipinjam"**, **"Dikembalikan"**, atau **"Ditolak"**
 - Filter berdasarkan status (label filter mengikuti penamaan status di atas)
-- Ajukan pengembalian langsung dari halaman ini
+- Ajukan pengembalian langsung dari halaman ini (khusus loan berstatus **borrowed**)
+
+---
+
+### 👤 6. Manajemen Pengguna (Admin)
+
+Halaman baru khusus admin untuk memantau pengguna terdaftar di sistem.
+
+- Lihat daftar seluruh user: **NIM**, **nama**, **email**, **role** (Admin/Pengguna), dan **total peminjaman** yang pernah diajukan
+- Pencarian user berdasarkan nama, email, atau NIM
+- (Backend) Endpoint detail per user (`GET /api/users/:id`) juga tersedia untuk menampilkan riwayat peminjaman lengkap milik satu user, siap dipakai kalau nanti dibuatkan halaman detail
+
+> Fitur ini saat ini bersifat **read-only** — admin belum bisa mengubah role, menonaktifkan, atau menghapus akun user langsung dari sini.
 
 ---
 
@@ -199,13 +221,13 @@ Halaman ringkasan untuk admin berisi:
 | userId | INT | FK ke `users.id` |
 | itemId | INT | FK ke `items.id` |
 | qty | INT | Jumlah unit yang dipinjam |
-| borrowDate | DATETIME | Waktu peminjaman (default: now) |
+| borrowDate | DATETIME | Waktu pengajuan peminjaman (default: now) |
 | dueDate | DATETIME | Batas waktu pengembalian (tidak boleh sebelum tanggal hari ini saat dibuat) |
 | returnDate | DATETIME | Waktu konfirmasi pengembalian oleh admin (nullable) |
-| status | STRING | `borrowed` / `pending_return` / `returned` (default: `borrowed`) |
+| status | STRING | `pending` / `borrowed` / `pending_return` / `returned` / `rejected` (default: `pending`) |
 | qrCode | VARCHAR | String unik untuk identifikasi transaksi via QR (nullable, unique) |
 
-> `pending_return` adalah status transisi: user sudah mengajukan pengembalian, tapi stok & status aset baru diperbarui setelah admin konfirmasi fisik barang.
+> Alur status loan: `pending` (baru diajukan, stok sudah direservasi) → `borrowed` (dikonfirmasi admin) **atau** `rejected` (ditolak admin, stok dikembalikan) → `pending_return` (user ajukan pengembalian) → `returned` (admin konfirmasi terima fisik barang, stok bertambah).
 ---
 
 ## ⚙️ Setup & Installation
@@ -342,8 +364,9 @@ pinjamin/
 │   │   ├── routes/
 │   │   │   ├── auth.js            # Register, Login
 │   │   │   ├── items.js           # CRUD Aset + upload foto + QR code
-│   │   │   ├── loans.js           # Peminjaman, pengajuan & konfirmasi pengembalian
-│   │   │   └── reports.js         # Dashboard, laporan, export CSV
+│   │   │   ├── loans.js           # Pengajuan/konfirmasi/tolak peminjaman & pengembalian
+│   │   │   ├── reports.js         # Dashboard, laporan, export CSV
+│   │   │   └── users.js           # Daftar & detail user (admin)
 │   │   │
 │   │   ├── middleware/
 │   │   │   └── auth.js            # JWT middleware + adminOnly guard
@@ -368,15 +391,16 @@ pinjamin/
 │       │   ├── Items.jsx          # Daftar aset kampus (status live dari stok)
 │       │   ├── ItemDetail.jsx     # Detail aset & form pinjam (validasi tanggal kembali)
 │       │   ├── ItemForm.jsx       # Tambah / edit aset (admin)
-│       │   ├── Loans.jsx          # Semua peminjaman & konfirmasi (admin)
-│       │   ├── MyLoans.jsx        # Riwayat & pengajuan pengembalian (user)
+│       │   ├── Loans.jsx          # Semua peminjaman, konfirmasi/tolak pinjam & konfirmasi kembali (admin)
+│       │   ├── MyLoans.jsx        # Riwayat, status pengajuan, & pengajuan pengembalian (user)
+│       │   ├── Users.jsx          # Daftar & pencarian user (admin)
 │       │   ├── Reports.jsx        # Laporan lengkap + export CSV (admin)
 │       │   └── NotFound.jsx       # Halaman 404
 │       │
 │       ├── services/
 │       │   ├── api.js             # Axios instance + interceptor JWT
 │       │   ├── authService.js     # Login, register, logout
-│       │   └── itemService.js     # Semua API call (items, loans, reports)
+│       │   └── itemService.js     # Semua API call (items, loans, users, reports)
 │       │
 │       ├── context/
 │       │   └── AuthContext.jsx    # Global auth state
@@ -399,32 +423,46 @@ pinjamin/
 ### Sesi Admin
 
 3. **Login** dengan `admin@pinjamin.com` / `admin` → otomatis masuk ke **Dashboard**
-4. Dashboard menampilkan: total aset, total pengguna, peminjaman aktif, menunggu konfirmasi, sudah dikembalikan, tabel keterlambatan, dan barang paling sering dipinjam
+4. Dashboard menampilkan: total aset, total pengguna, peminjaman aktif, menunggu konfirmasi peminjaman, menunggu konfirmasi pengembalian, sudah dikembalikan, tabel keterlambatan, dan barang paling sering dipinjam
 5. Klik **Tambah Barang** di sidebar (Dashboard ada paling atas, menu lain di bawahnya) → isi form (nama, kategori, stok, foto) → simpan
 6. Buka **Daftar Barang** → aset baru muncul dengan status **Tersedia** (status ini otomatis berubah jadi **Dipinjam** begitu stoknya 0, tanpa perlu admin edit manual)
+7. Buka **Daftar User** di sidebar → cek daftar seluruh user terdaftar beserta total peminjamannya, coba fitur pencarian by nama/email/NIM
 
 ---
 
 ### Sesi User
 
-7. Buka tab baru → **Register** akun baru (isi NIM 8 digit, nama, email, password)
-8. **Login** sebagai user → otomatis masuk ke **Daftar Barang**
-9. Pilih aset yang tersedia → klik **Detail**
-10. Coba klik **Pinjam Barang** tanpa mengisi tanggal kembali → muncul pesan merah **"Masukkan tanggal pengembalian"**
-11. Isi jumlah & tanggal kembali (tanggal sebelum hari ini tidak bisa dipilih) → klik **Pinjam Barang**
-12. Stok berkurang otomatis, muncul pesan "Peminjaman berhasil"
-13. Buka **Peminjaman Saya** → status loan: **Dipinjam**, beserta tanggal kembali yang sudah diisi
-14. Klik **Ajukan Pengembalian** → status berubah jadi **Menunggu Konfirmasi Admin**
+8. Buka tab baru → **Register** akun baru (isi NIM 8 digit, nama, email, password)
+9. **Login** sebagai user → otomatis masuk ke **Daftar Barang**
+10. Pilih aset yang tersedia → klik **Detail**
+11. Coba klik **Pinjam Barang** tanpa mengisi tanggal kembali → muncul pesan merah **"Masukkan tanggal pengembalian"**
+12. Isi jumlah & tanggal kembali (tanggal sebelum hari ini tidak bisa dipilih) → klik **Pinjam Barang**
+13. Stok berkurang otomatis, muncul pesan **"Pengajuan peminjaman berhasil. Silakan datang ke tempat peminjaman untuk konfirmasi admin."**
+14. Buka **Peminjaman Saya** → status loan: **Menunggu Konfirmasi Admin**, beserta tanggal kembali yang sudah diisi
 
 ---
 
-### Kembali ke Admin
+### Kembali ke Admin (Konfirmasi Peminjaman)
 
 15. Login kembali sebagai admin → buka **Semua Peminjaman**
-16. Filter **"Menunggu Konfirmasi Admin"** → muncul pengajuan pengembalian dari user tadi, lengkap kolom **Batas Kembali**
-17. Klik **Konfirmasi Diterima** → stok bertambah, status jadi **Dikembalikan**
-18. Buka **Laporan** → transaksi tadi muncul lengkap (peminjam, barang, waktu pinjam, batas kembali, waktu kembali), dan card ringkasan **menunggu konfirmasi** menampilkan angka yang akurat
-19. Klik **Export CSV** → file laporan ter-download sesuai filter aktif
+16. Filter **"Menunggu Konfirmasi Peminjaman"** → muncul pengajuan dari user tadi
+17. Pastikan user sudah datang secara fisik → klik **Konfirmasi Peminjaman** → status berubah jadi **Dipinjam** (atau klik **Tolak** jika barang tidak jadi diserahkan → status **Ditolak**, stok otomatis dikembalikan)
+
+---
+
+### Sesi User (Pengembalian)
+
+18. Login kembali sebagai user tadi → buka **Peminjaman Saya** → status sekarang **Dipinjam** → klik **Ajukan Pengembalian** → status berubah jadi **Menunggu Konfirmasi Admin**
+
+---
+
+### Kembali ke Admin (Konfirmasi Pengembalian)
+
+19. Login kembali sebagai admin → buka **Semua Peminjaman**
+20. Filter **"Menunggu Konfirmasi"** (pengembalian) → muncul pengajuan pengembalian dari user tadi, lengkap kolom **Batas Kembali**
+21. Klik **Konfirmasi Diterima** → stok bertambah, status jadi **Dikembalikan**
+22. Buka **Laporan** → transaksi tadi muncul lengkap (peminjam, barang, waktu pinjam, batas kembali, waktu kembali), dan card ringkasan menampilkan angka yang akurat untuk setiap status
+23. Klik **Export CSV** → file laporan ter-download sesuai filter aktif
 
 ---
 
@@ -439,7 +477,9 @@ pinjamin/
 
 - Project ini dibuat untuk kebutuhan pembelajaran saja
 - Akun admin dibuat manual via script `create-admin.js` — registrasi publik hanya untuk role user
-- Pengembalian menggunakan mekanisme dua tahap (pengajuan user → konfirmasi admin) untuk memastikan verifikasi fisik sebelum stok & status sistem diperbarui
+- Peminjaman maupun pengembalian sama-sama menggunakan mekanisme dua tahap (pengajuan user → konfirmasi/tolak admin) untuk memastikan verifikasi fisik barang di kedua ujung transaksi
+- Stok direservasi (dikurangi) sejak peminjaman **diajukan**, bukan menunggu konfirmasi admin — supaya tidak ada pengajuan ganda untuk stok yang sama; jika ditolak admin, stok dikembalikan otomatis
 - Status "Tersedia"/"Dipinjam" pada aset dihitung live dari nilai stok, bukan field manual — hanya status "Rusak" yang masih bisa diset manual oleh admin
 - Foto aset disimpan lokal di folder `backend/src/uploads/` dan diakses via endpoint `/uploads/`
 - Export CSV menggunakan direct URL dengan token di query param — tidak melalui interceptor Axios
+- Halaman **Daftar User** untuk admin saat ini bersifat read-only (belum ada fitur edit role/hapus user)
