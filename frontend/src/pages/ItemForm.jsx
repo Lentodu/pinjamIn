@@ -76,57 +76,72 @@ export default function ItemForm() {
     <div className="page-container">
       <h2>{isEdit ? "Edit Barang" : "Tambah Barang"}</h2>
       {error && <p className="error-msg">{error}</p>}
-      <form onSubmit={handleSubmit} className="item-form">
-        <div className="form-group">
-          <label>Nama Barang</label>
-          <input
-            type="text" name="name" value={form.name}
-            onChange={handleChange} required placeholder="Nama barang"
-          />
-        </div>
-        <div className="form-group">
-          <label>Kategori</label>
-          <select name="category" value={form.category} onChange={handleChange} required>
-            <option value="">-- Pilih Kategori --</option>
-            {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
-          </select>
-        </div>
-        <div className="form-group">
-          <label>Deskripsi</label>
-          <textarea
-            name="description" value={form.description}
-            onChange={handleChange} rows={3} placeholder="Deskripsi opsional"
-          />
-        </div>
-        <div className="form-group">
-          <label>Stok</label>
-          <input
-            type="number" name="stock" value={form.stock}
-            onChange={handleChange} min={0} required
-          />
-        </div>
-        {isEdit && (
-          <div className="form-group">
-            <label>Status</label>
-            <select name="status" value={form.status} onChange={handleChange}>
-              {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
-            </select>
+      <div className="item-page-layout">
+        <form onSubmit={handleSubmit} className="item-form">
+          <div className="form-row">
+            <div className="form-group">
+              <label>Nama Barang</label>
+              <input
+                type="text" name="name" value={form.name}
+                onChange={handleChange} required placeholder="Nama barang"
+              />
+            </div>
+            <div className="form-group">
+              <label>Kategori</label>
+              <select name="category" value={form.category} onChange={handleChange} required>
+                <option value="">-- Pilih Kategori --</option>
+                {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
           </div>
-        )}
-        <div className="form-group">
-          <label>Foto Barang</label>
-          <input type="file" accept="image/*" onChange={handlePhoto} />
-          {preview && <img src={preview} alt="preview" className="photo-preview" />}
+          <div className="form-group">
+            <label>Deskripsi</label>
+            <textarea
+              name="description" value={form.description}
+              onChange={handleChange} rows={3} placeholder="Deskripsi opsional"
+            />
+          </div>
+          <div className="form-row">
+            <div className="form-group">
+              <label>Stok</label>
+              <input
+                type="number" name="stock" value={form.stock}
+                onChange={handleChange} min={0} required
+              />
+            </div>
+            {isEdit && (
+              <div className="form-group">
+                <label>Status</label>
+                <select name="status" value={form.status} onChange={handleChange}>
+                  {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+                </select>
+              </div>
+            )}
+          </div>
+          <div className="form-group">
+            <label>Foto Barang</label>
+            <input type="file" accept="image/*" onChange={handlePhoto} />
+          </div>
+          <div className="form-actions">
+            <button type="button" className="btn-secondary" onClick={() => navigate("/items")}>
+              Batal
+            </button>
+            <button type="submit" className="btn-primary" disabled={loading}>
+              {loading ? "Menyimpan..." : isEdit ? "Simpan Perubahan" : "Tambah Barang"}
+            </button>
+          </div>
+        </form>
+
+        <div className="item-preview-card">
+          <h4>Pratinjau</h4>
+          <div className="item-preview-photo">
+            {preview ? <img src={preview} alt="preview" /> : "Belum ada foto"}
+          </div>
+          <div className="item-preview-name">{form.name || "Nama barang"}</div>
+          <div className="item-preview-meta">{form.category || "Kategori belum dipilih"}</div>
+          <div className="item-preview-meta">Stok: {form.stock || 0}</div>
         </div>
-        <div className="form-actions">
-          <button type="button" className="btn-secondary" onClick={() => navigate("/items")}>
-            Batal
-          </button>
-          <button type="submit" className="btn-primary" disabled={loading}>
-            {loading ? "Menyimpan..." : isEdit ? "Simpan Perubahan" : "Tambah Barang"}
-          </button>
-        </div>
-      </form>
+      </div>
     </div>
   );
 }

@@ -30,7 +30,7 @@ export default function Users() {
   return (
     <div className="page-container">
       <div className="page-header">
-        <h2>Daftar User</h2>
+        <h2>Daftar Peminjam</h2>
         <form onSubmit={handleSearch} className="search-form">
           <input
             type="text"
