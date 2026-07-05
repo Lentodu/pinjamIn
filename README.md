@@ -2,7 +2,8 @@
 
 **Pinjamin** adalah aplikasi manajemen peminjaman aset kampus berbasis web
 
-Sistem ini dirancang untuk membantu pengelolaan peminjaman peralatan dan aset milik kampus — mulai dari peralatan elektronik hingga alat laboratorium dan praktikum — secara terdigitalisasi dan terpusat.
+Sistem ini dirancang untuk membantu pengelolaan peminjaman peralatan dan aset milik kampus — mulai dari peralatan elektronik hingga alat laboratorium dan praktikum — secara terdigitalisasi dan terpusat. Sistem ini belum sepenuhnya final dan masih terdapat beberapa kekurangan.
+
 
 ---
 
@@ -266,11 +267,8 @@ Jalankan migrasi Prisma:
 npx prisma migrate dev --name init
 ```
 
-Buat akun admin pertama 
+Jalankan script untuk membuat akun admin pertama :
 
-```
-
-Jalankan script:
 ```bash
 node create-admin.js
 ```
