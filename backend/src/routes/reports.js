@@ -119,7 +119,19 @@ router.get("/", authenticate, adminOnly, async (req, res) => {
       returned: loans.filter((l) => l.status === "returned").length,
     };
 
-    res.json({ summary, loans });
+    // Bug fix: hitung barang paling sering dipinjam sesuai filter yang aktif
+    // (sebelumnya field ini tidak dikirim sama sekali sehingga tabel di FE tidak pernah tampil)
+    const countByItem = {};
+    for (const l of loans) {
+      const key = l.item?.name || "Tidak diketahui";
+      countByItem[key] = (countByItem[key] || 0) + 1;
+    }
+    const topItems = Object.entries(countByItem)
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+
+    res.json({ summary, loans, topItems });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Server error" });

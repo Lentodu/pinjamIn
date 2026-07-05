@@ -96,20 +96,32 @@ export default function Reports() {
           {data?.summary && (
             <div className="summary-cards" style={{ marginBottom: "1.5rem" }}>
               <div className="summary-card">
-                <span className="summary-number">{data.summary.total}</span>
-                <span className="summary-label">Total Transaksi</span>
+                <span className="summary-icon">📊</span>
+                <div>
+                  <span className="summary-number">{data.summary.total}</span>
+                  <span className="summary-label">Total Transaksi</span>
+                </div>
               </div>
               <div className="summary-card badge-blue">
-                <span className="summary-number">{data.summary.borrowed}</span>
-                <span className="summary-label">Dipinjam</span>
+                <span className="summary-icon">📤</span>
+                <div>
+                  <span className="summary-number">{data.summary.borrowed}</span>
+                  <span className="summary-label">Dipinjam</span>
+                </div>
               </div>
               <div className="summary-card badge-yellow">
-                <span className="summary-number">{data.summary.pendingReturn}</span>
-                <span className="summary-label">Menunggu Konfirmasi</span>
+                <span className="summary-icon">⏳</span>
+                <div>
+                  <span className="summary-number">{data.summary.pendingReturn}</span>
+                  <span className="summary-label">Menunggu Konfirmasi</span>
+                </div>
               </div>
               <div className="summary-card badge-green">
-                <span className="summary-number">{data.summary.returned}</span>
-                <span className="summary-label">Dikembalikan</span>
+                <span className="summary-icon">✅</span>
+                <div>
+                  <span className="summary-number">{data.summary.returned}</span>
+                  <span className="summary-label">Dikembalikan</span>
+                </div>
               </div>
             </div>
           )}

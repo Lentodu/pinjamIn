@@ -66,7 +66,7 @@ export default function Items() {
                     className="item-photo"
                   />
                 ) : (
-                  <div className="item-photo-placeholder"></div>
+                  <div className="item-photo-placeholder">📦</div>
                 )}
                 <div className="item-info">
                   <h3>{item.name}</h3>
