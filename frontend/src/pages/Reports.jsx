@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { getReports } from "../services/itemService";
 import api from "../services/api";
+import { IconBarChart, IconArrowUpRight, IconClock, IconCheckCircle } from "../components/Icons";
 
 const STATUS_LABEL = {
   borrowed: { label: "Dipinjam", className: "badge-blue" },
@@ -96,28 +97,28 @@ export default function Reports() {
           {data?.summary && (
             <div className="summary-cards" style={{ marginBottom: "1.5rem" }}>
               <div className="summary-card">
-                <span className="summary-icon">📊</span>
+                <span className="summary-icon"><IconBarChart /></span>
                 <div>
                   <span className="summary-number">{data.summary.total}</span>
                   <span className="summary-label">Total Transaksi</span>
                 </div>
               </div>
               <div className="summary-card badge-blue">
-                <span className="summary-icon">📤</span>
+                <span className="summary-icon"><IconArrowUpRight /></span>
                 <div>
                   <span className="summary-number">{data.summary.borrowed}</span>
                   <span className="summary-label">Dipinjam</span>
                 </div>
               </div>
               <div className="summary-card badge-yellow">
-                <span className="summary-icon">⏳</span>
+                <span className="summary-icon"><IconClock /></span>
                 <div>
                   <span className="summary-number">{data.summary.pendingReturn}</span>
                   <span className="summary-label">Menunggu Konfirmasi</span>
                 </div>
               </div>
               <div className="summary-card badge-green">
-                <span className="summary-icon">✅</span>
+                <span className="summary-icon"><IconCheckCircle /></span>
                 <div>
                   <span className="summary-number">{data.summary.returned}</span>
                   <span className="summary-label">Dikembalikan</span>

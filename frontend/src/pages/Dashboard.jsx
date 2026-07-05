@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { getDashboard } from "../services/itemService";
+import { IconBox, IconUsers, IconArrowUpRight, IconClock, IconCheckCircle } from "../components/Icons";
 
 export default function Dashboard() {
   const [data, setData] = useState(null);
@@ -32,35 +33,35 @@ const topItems = data.topItems ?? [];
       {/* Statistik utama */}
       <div className="summary-cards">
         <div className="summary-card">
-          <span className="summary-icon">📦</span>
+          <span className="summary-icon"><IconBox /></span>
           <div>
             <span className="summary-number">{stats.totalItems}</span>
             <span className="summary-label">Total Aset</span>
           </div>
         </div>
         <div className="summary-card">
-          <span className="summary-icon">👥</span>
+          <span className="summary-icon"><IconUsers /></span>
           <div>
             <span className="summary-number">{stats.totalUsers}</span>
             <span className="summary-label">Pengguna Terdaftar</span>
           </div>
         </div>
         <div className="summary-card badge-blue">
-          <span className="summary-icon">📤</span>
+          <span className="summary-icon"><IconArrowUpRight /></span>
           <div>
             <span className="summary-number">{stats.borrowed}</span>
             <span className="summary-label">Sedang Dipinjam</span>
           </div>
         </div>
         <div className="summary-card badge-yellow">
-          <span className="summary-icon">⏳</span>
+          <span className="summary-icon"><IconClock /></span>
           <div>
             <span className="summary-number">{stats.pendingReturn}</span>
             <span className="summary-label">Menunggu Konfirmasi</span>
           </div>
         </div>
         <div className="summary-card badge-green">
-          <span className="summary-icon">✅</span>
+          <span className="summary-icon"><IconCheckCircle /></span>
           <div>
             <span className="summary-number">{stats.returned}</span>
             <span className="summary-label">Sudah Dikembalikan</span>
